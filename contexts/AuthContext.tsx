@@ -33,12 +33,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // 10초 타임아웃 설정
+    const timeout = setTimeout(() => {
+      console.warn("⚠️ Auth initialization timeout");
+      setLoading(false);
+    }, 10000);
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      clearTimeout(timeout);
       setUser(user);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
