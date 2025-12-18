@@ -1,0 +1,279 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import AdminLayout from "../layout";
+import { motion } from "framer-motion";
+
+interface User {
+  id: string;
+  email: string;
+  createdAt?: string;
+  lastLogin?: string;
+  childInfo?: any;
+  diaryCount?: number;
+}
+
+export default function UsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTab, setSelectedTab] = useState<"users" | "children">("users");
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (!db) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log("📊 Loading users from Firestore...");
+        
+        // 사용자 정보 로드 (children 컬렉션에서)
+        const childrenSnapshot = await getDocs(collection(db, "children"));
+        console.log("👥 Total children documents:", childrenSnapshot.size);
+        
+        const userList: User[] = [];
+
+        // 먼저 모든 일기를 한 번만 로드
+        const diariesSnapshot = await getDocs(collection(db, "diaries"));
+        const allDiaries = diariesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          userId: doc.data().userId,
+        }));
+        
+        console.log("📝 Total diaries:", allDiaries.length);
+
+        for (const childDoc of childrenSnapshot.docs) {
+          const childData = childDoc.data();
+          
+          console.log("👤 User data:", {
+            id: childDoc.id,
+            childName: childData.childName,
+            email: childData.email,
+            parentId: childData.parentId,
+          });
+          
+          // 해당 사용자의 일기 수 계산 (최적화)
+          const userDiaries = allDiaries.filter(
+            (d) => d.userId === childDoc.id
+          );
+
+          // 이메일 정보 가져오기
+          // 1. childData에 이메일이 있으면 사용
+          // 2. 없으면 parentId로 부모 정보에서 가져오기 시도
+          let userEmail = childData.email || null;
+          
+          if (!userEmail && childData.parentId) {
+            try {
+              const parentRef = doc(db, "parents", childData.parentId);
+              const parentSnap = await getDoc(parentRef);
+              if (parentSnap.exists()) {
+                userEmail = parentSnap.data().email || null;
+              }
+            } catch (err) {
+              console.log("⚠️ Could not fetch parent email:", err);
+            }
+          }
+
+          userList.push({
+            id: childDoc.id,
+            email: userEmail || `UID: ${childDoc.id.substring(0, 8)}...`,
+            createdAt: childData.createdAt,
+            lastLogin: childData.lastLogin,
+            childInfo: childData,
+            diaryCount: userDiaries.length,
+          });
+        }
+
+        console.log("✅ Loaded users:", userList.length);
+        setUsers(userList);
+      } catch (error) {
+        console.error("❌ Error loading users:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
+  const handleBlockUser = async (userId: string) => {
+    if (!confirm("정말 이 사용자를 차단하시겠습니까?")) return;
+
+    try {
+      // Firestore에 차단 정보 저장
+      await updateDoc(doc(db, "children", userId), {
+        blocked: true,
+        blockedAt: new Date().toISOString(),
+      });
+      
+      alert("사용자가 차단되었습니다.");
+      // 목록 새로고침
+      window.location.reload();
+    } catch (error) {
+      console.error("Error blocking user:", error);
+      alert("차단 중 오류가 발생했습니다.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">로딩 중...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+          👨‍👩‍👧 유저/아이 관리
+        </h1>
+
+        {/* 탭 */}
+        <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setSelectedTab("users")}
+            className={`px-4 py-2 font-semibold transition-all ${
+              selectedTab === "users"
+                ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+            }`}
+          >
+            유저 목록
+          </button>
+          <button
+            onClick={() => setSelectedTab("children")}
+            className={`px-4 py-2 font-semibold transition-all ${
+              selectedTab === "children"
+                ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+            }`}
+          >
+            아이 목록
+          </button>
+        </div>
+
+        {/* 유저 목록 */}
+        {selectedTab === "users" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      이메일
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      가입일
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      일기 수
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      액션
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {users.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {user.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {user.createdAt
+                          ? new Date(user.createdAt).toLocaleDateString("ko-KR")
+                          : "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {user.diaryCount || 0}개
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => handleBlockUser(user.id)}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          차단
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+
+        {/* 아이 목록 */}
+        {selectedTab === "children" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      이름
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      나이
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      레벨
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      일기 수
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {users
+                    .filter((user) => user.childInfo)
+                    .map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                          {user.childInfo?.name || "-"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          {user.childInfo?.age || "-"}세
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
+                            {user.childInfo?.englishLevel || "Lv.1"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          {user.diaryCount || 0}개
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+      </div>
+    </AdminLayout>
+  );
+}
+
+
+
+
+

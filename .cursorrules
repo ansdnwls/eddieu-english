@@ -1,0 +1,909 @@
+# Next.js 16 + TypeScript + Firebase Project - Cursor AI Rules
+
+## 🎯 Project Context
+
+You are an expert full-stack developer working on a **Next.js 16 App Router** project for an educational web application that helps children improve their English diary writing with AI-powered corrections.
+
+**Tech Stack:**
+- Framework: Next.js 16 (App Router)
+- Language: TypeScript (strict mode)
+- Styling: Tailwind CSS 4
+- Animation: Framer Motion
+- Authentication: Firebase Auth
+- Database: Firestore
+- AI: OpenAI GPT-4
+- OCR: Google Vision API
+
+**Target Users:** Children aged 6-13 and their parents
+**UI Philosophy:** Child-friendly, warm, encouraging, accessible
+
+---
+
+## 🚨 CRITICAL RULES - MUST FOLLOW
+
+### 1. TypeScript - ZERO TOLERANCE FOR `any`
+
+```typescript
+// ✅ ALWAYS DO THIS
+interface ImageUploadProps {
+  onImageSelect: (file: File) => void;
+  selectedImage: File | null;
+}
+
+export default function ImageUpload({ 
+  onImageSelect, 
+  selectedImage 
+}: ImageUploadProps) { ... }
+
+// ❌ NEVER DO THIS
+function handleData(data: any) { ... }
+const result: any = await fetch(...);
+```
+
+**RULES:**
+- ✅ **MUST** define explicit types for ALL functions, variables, and props
+- ✅ **MUST** use `unknown` + type guards if type is truly unknown
+- ✅ **MUST** define interfaces in `app/types/index.ts` for shared types
+- ✅ **MUST** export reusable types
+- ❌ **NEVER** use `any` type (use `unknown` instead)
+- ❌ **NEVER** use implicit `any` 
+- ❌ **NEVER** disable TypeScript errors with `@ts-ignore`
+
+### 2. Component Architecture - Client vs Server
+
+```typescript
+// ✅ CLIENT COMPONENT - Has interactivity
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+
+export default function InteractiveComponent() {
+  const [state, setState] = useState<string>("");
+  // ... interactive logic
+}
+
+// ✅ SERVER COMPONENT - Static/data fetching
+// NO "use client" directive
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Page Title",
+};
+
+export default function StaticPage() {
+  return <div>Static content</div>;
+}
+```
+
+**RULES:**
+- ✅ **MUST** use `"use client"` ONLY when component needs:
+  - State (`useState`, `useReducer`)
+  - Effects (`useEffect`, `useLayoutEffect`)
+  - Event handlers (`onClick`, `onChange`)
+  - Browser APIs (`window`, `document`)
+  - Framer Motion animations
+- ✅ **MUST** use Server Components by default
+- ✅ **MUST** place `"use client"` at the TOP of the file (first line)
+- ❌ **NEVER** add `"use client"` to Server Components
+- ❌ **NEVER** use hooks in Server Components
+
+### 3. File Naming - STRICT CONVENTIONS
+
+| File Type | Naming Convention | Example |
+|-----------|------------------|---------|
+| Pages | `page.tsx` | `app/dashboard/page.tsx` |
+| Layouts | `layout.tsx` | `app/admin/layout.tsx` |
+| API Routes | `route.ts` | `app/api/correct-diary/route.ts` |
+| Components | `PascalCase.tsx` | `ImageUpload.tsx`, `CorrectionResult.tsx` |
+| Utils | `camelCase.ts` | `koreanHelper.ts`, `pdfGenerator.ts` |
+| Contexts | `PascalCase + Context.tsx` | `AuthContext.tsx` |
+| Types | `index.ts` | `app/types/index.ts` |
+
+**RULES:**
+- ✅ **MUST** match component name to file name
+- ✅ **MUST** use lowercase for route folders
+- ❌ **NEVER** use kebab-case for components (use PascalCase)
+- ❌ **NEVER** use different casing for file vs component name
+
+### 4. Error Handling - COMPREHENSIVE & USER-FRIENDLY
+
+```typescript
+// ✅ ALWAYS DO THIS
+const handleSubmit = async () => {
+  setIsLoading(true);
+  setError(null);
+  
+  try {
+    const response = await fetch("/api/endpoint", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || "Unknown error");
+    }
+    
+    setData(result.data);
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error("❌ Error:", error);
+    setError(error.message || "An error occurred");
+  } finally {
+    setIsLoading(false);
+  }
+};
+```
+
+**RULES:**
+- ✅ **MUST** wrap ALL async operations in try-catch
+- ✅ **MUST** provide user-friendly error messages in Korean
+- ✅ **MUST** log detailed errors to console with emojis (✅/❌/⚠️)
+- ✅ **MUST** set loading states (before try) and reset them (in finally)
+- ✅ **MUST** handle Firebase errors with specific messages
+- ❌ **NEVER** swallow errors silently
+- ❌ **NEVER** show technical error messages to users
+- ❌ **NEVER** forget the `finally` block for cleanup
+
+### 5. API Routes - CONSISTENT STRUCTURE
+
+```typescript
+// app/api/example/route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  try {
+    // 1. Parse request
+    const body = await request.json();
+    const { requiredField } = body;
+
+    // 2. Validate input
+    if (!requiredField) {
+      return NextResponse.json(
+        { success: false, error: "Required field is missing" },
+        { status: 400 }
+      );
+    }
+
+    // 3. Business logic
+    const result = await processData(requiredField);
+
+    // 4. Return success
+    return NextResponse.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("❌ API Error:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Server error" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+**RULES:**
+- ✅ **MUST** export HTTP methods explicitly (`GET`, `POST`, `PUT`, `DELETE`)
+- ✅ **MUST** return consistent response format:
+  ```typescript
+  { success: boolean; data?: T; error?: string }
+  ```
+- ✅ **MUST** validate input before processing
+- ✅ **MUST** return appropriate HTTP status codes (200, 400, 500)
+- ✅ **MUST** provide Mock data fallback when API keys are missing
+- ❌ **NEVER** expose sensitive errors to client
+- ❌ **NEVER** skip input validation
+
+---
+
+## 🎨 STYLING RULES - TAILWIND CSS
+
+### Class Order Convention (MANDATORY)
+
+```tsx
+// ✅ CORRECT ORDER
+<div className="
+  flex items-center justify-between    // Layout
+  w-full max-w-4xl min-h-screen       // Size
+  px-4 py-6 gap-4                     // Spacing
+  bg-white dark:bg-gray-800           // Background
+  text-gray-900 dark:text-white       // Text color
+  text-xl font-bold                   // Typography
+  rounded-2xl shadow-xl               // Effects
+  hover:scale-105 transition-all      // States
+">
+```
+
+**ORDER:** Layout → Size → Spacing → Background → Text → Typography → Effects → States
+
+### Color System - STRICT PALETTE
+
+```tsx
+// Primary Actions
+bg-blue-500 hover:bg-blue-600
+bg-gradient-to-r from-blue-500 to-purple-500
+
+// Secondary Actions
+bg-gray-200 dark:bg-gray-700
+
+// Semantic Colors
+bg-green-500  // Success
+bg-red-500    // Error/Danger
+bg-yellow-500 // Warning
+bg-blue-50    // Info
+
+// Background Gradients (Child-friendly)
+bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50
+dark:from-gray-900 dark:via-purple-900/20 dark:to-pink-900/20
+```
+
+**RULES:**
+- ✅ **MUST** use Tailwind classes (NO inline styles)
+- ✅ **MUST** support dark mode (`dark:` prefix)
+- ✅ **MUST** use mobile-first responsive design
+- ✅ **MUST** use consistent spacing scale (2, 4, 6, 8, 12)
+- ❌ **NEVER** use inline styles (`style={{ ... }}`)
+- ❌ **NEVER** create custom CSS unless absolutely necessary
+- ❌ **NEVER** use inconsistent colors outside the palette
+
+### Responsive Design - MOBILE FIRST
+
+```tsx
+// ✅ ALWAYS mobile-first, then scale up
+<div className="
+  text-sm sm:text-base md:text-lg lg:text-xl
+  grid-cols-1 sm:grid-cols-2 md:grid-cols-3
+  px-4 sm:px-6 md:px-8 lg:px-12
+">
+```
+
+**Breakpoints:**
+- `sm: 640px` - Mobile landscape / Small tablet
+- `md: 768px` - Tablet
+- `lg: 1024px` - Desktop
+- `xl: 1280px` - Large desktop
+
+**RULES:**
+- ✅ **MUST** start with mobile styles (no prefix)
+- ✅ **MUST** progressively enhance for larger screens
+- ❌ **NEVER** use desktop-first approach
+
+---
+
+## 🔐 SECURITY & AUTHENTICATION
+
+### Firebase Integration
+
+```typescript
+// ✅ CORRECT - Client-side check
+if (typeof window !== "undefined") {
+  auth = getAuth(app);
+}
+
+// ✅ CORRECT - Environment variable with fallback
+const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "fallback-value";
+
+// ✅ CORRECT - Firestore with error handling
+try {
+  if (!db) {
+    throw new Error("Firestore not initialized");
+  }
+  await setDoc(doc(db, "collection", "docId"), data);
+  
+  // Backup to localStorage
+  localStorage.setItem(`backup_${docId}`, JSON.stringify(data));
+} catch (error) {
+  console.error("❌ Firestore error:", error);
+  throw error;
+}
+```
+
+**RULES:**
+- ✅ **MUST** check `typeof window !== "undefined"` before using Firebase Auth
+- ✅ **MUST** provide fallback values for environment variables
+- ✅ **MUST** backup critical data to localStorage
+- ✅ **MUST** wrap protected pages with `<AuthGuard>`
+- ❌ **NEVER** expose API keys without `NEXT_PUBLIC_` prefix (if server-only)
+- ❌ **NEVER** skip client-side checks for Firebase Auth
+
+### Protected Routes
+
+```tsx
+// ✅ ALWAYS wrap protected pages
+export default function DashboardPage() {
+  return (
+    <AuthGuard redirectTo="/login">
+      {/* Protected content */}
+    </AuthGuard>
+  );
+}
+```
+
+**RULES:**
+- ✅ **MUST** use `<AuthGuard>` for protected pages
+- ✅ **MUST** redirect unauthenticated users to `/login`
+- ❌ **NEVER** forget to protect sensitive pages
+
+---
+
+## 🎭 ANIMATION RULES - FRAMER MOTION
+
+### Standard Patterns
+
+```tsx
+// ✅ Page Entry Animation
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5, delay: 0.2 }}
+>
+
+// ✅ Button Interaction
+<motion.button
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.98 }}
+>
+
+// ✅ Sequential Animation
+<motion.div transition={{ delay: 0.1 }} />
+<motion.div transition={{ delay: 0.2 }} />
+<motion.div transition={{ delay: 0.3 }} />
+```
+
+**RULES:**
+- ✅ **MUST** use subtle animations (scale: 1.05, not 1.5)
+- ✅ **MUST** use consistent duration (0.3-0.5s)
+- ✅ **MUST** stagger sequential items with delay
+- ❌ **NEVER** use jarring or distracting animations
+- ❌ **NEVER** animate on Server Components
+
+---
+
+## 📊 STATE MANAGEMENT
+
+### Local State - useState
+
+```typescript
+// ✅ CORRECT - Local component state
+const [loading, setLoading] = useState<boolean>(false);
+const [error, setError] = useState<string | null>(null);
+const [data, setData] = useState<DataType | null>(null);
+```
+
+### Global State - Context API
+
+```typescript
+// ✅ CORRECT - Global auth state
+const { user, loading, signIn, signOut } = useAuth();
+
+// contexts/AuthContext.tsx
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+}
+```
+
+**RULES:**
+- ✅ **MUST** use `useState` for local component state
+- ✅ **MUST** use Context API for global state (auth, theme)
+- ✅ **MUST** define Context interface types
+- ❌ **NEVER** use prop drilling for 3+ levels
+- ❌ **NEVER** put everything in global state
+
+---
+
+## 🧩 COMPONENT PATTERNS
+
+### Props Interface Naming
+
+```typescript
+// ✅ CORRECT
+interface ImageUploadProps { ... }
+interface CorrectionResultProps { ... }
+
+// ❌ WRONG
+interface IImageUpload { ... }
+interface Props { ... }
+```
+
+### Component Structure
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+
+// 1. Props interface
+interface ComponentProps {
+  title: string;
+  onAction: () => void;
+}
+
+// 2. Component definition
+export default function Component({ title, onAction }: ComponentProps) {
+  // 3. State
+  const [loading, setLoading] = useState(false);
+  
+  // 4. Handlers
+  const handleClick = async () => {
+    setLoading(true);
+    try {
+      await onAction();
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // 5. Render
+  return (
+    <motion.div {...animationProps}>
+      {/* JSX */}
+    </motion.div>
+  );
+}
+```
+
+**ORDER:** Props interface → Component → State → Handlers → Render
+
+**RULES:**
+- ✅ **MUST** follow this structure order
+- ✅ **MUST** use default export for components
+- ✅ **MUST** define Props interface before component
+- ❌ **NEVER** mix state and handlers with JSX
+
+---
+
+## 🎯 CHILD-FRIENDLY UI REQUIREMENTS
+
+### Design Principles
+
+```tsx
+// ✅ Large, touch-friendly buttons (min 44px height)
+<button className="py-4 px-12 text-xl font-bold">
+
+// ✅ Use emojis for visual cues
+<div className="text-4xl mb-4">🎉</div>
+<h3>Cheer Up! 잘했어요! 💪</h3>
+
+// ✅ Warm, encouraging messages
+feedback: "와! 정말 잘 썼어요! 계속 연습하면 더 좋아질 거예요! 🌟"
+
+// ✅ Bright, warm colors
+bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50
+```
+
+**RULES:**
+- ✅ **MUST** use bright, warm gradient backgrounds
+- ✅ **MUST** make buttons large (min-h-[44px] for touch)
+- ✅ **MUST** use emojis for visual appeal
+- ✅ **MUST** provide encouraging, positive feedback
+- ✅ **MUST** use smooth, gentle animations
+- ❌ **NEVER** use harsh colors or language
+- ❌ **NEVER** criticize mistakes harshly
+
+---
+
+## 🚫 ABSOLUTE DON'Ts - CRITICAL VIOLATIONS
+
+### 1. Type Safety Violations
+```typescript
+// ❌ FORBIDDEN
+const data: any = ...;
+function process(input: any) { ... }
+// @ts-ignore
+const result = ...;
+```
+
+### 2. Security Violations
+```typescript
+// ❌ FORBIDDEN - Exposing secrets
+const apiKey = "sk-abc123..."; // Hardcoded
+console.log(process.env.OPENAI_API_KEY); // Logging secrets
+```
+
+### 3. Performance Violations
+```typescript
+// ❌ FORBIDDEN - Memory leaks
+useEffect(() => {
+  const interval = setInterval(...);
+  // Missing cleanup!
+}, []);
+
+// ❌ FORBIDDEN - Blocking operations
+const data = await fetch(...); // In render body
+```
+
+### 4. Styling Violations
+```tsx
+// ❌ FORBIDDEN - Inline styles
+<div style={{ color: 'red', margin: '10px' }}>
+
+// ❌ FORBIDDEN - Inconsistent spacing
+<div className="mt-3 mb-5 ml-7 mr-9">
+```
+
+### 5. Firebase Violations
+```typescript
+// ❌ FORBIDDEN - No client check
+const auth = getAuth(app); // Might fail on server
+
+// ❌ FORBIDDEN - No error handling
+await setDoc(doc(db, "users", id), data); // Might fail
+```
+
+---
+
+## ✅ MUST-DO CHECKLIST
+
+Before completing ANY task, verify:
+
+- [ ] All variables and functions have explicit types (NO `any`)
+- [ ] `"use client"` is used ONLY when necessary
+- [ ] All async operations are wrapped in try-catch-finally
+- [ ] Errors are logged with emoji prefixes (✅/❌/⚠️)
+- [ ] User-facing errors are in Korean and friendly
+- [ ] Tailwind classes follow the correct order
+- [ ] Dark mode is supported (`dark:` prefix)
+- [ ] Mobile-first responsive design is implemented
+- [ ] Firebase operations check `typeof window !== "undefined"`
+- [ ] Protected routes are wrapped with `<AuthGuard>`
+- [ ] API responses follow the standard format
+- [ ] Components use PascalCase file names
+- [ ] Props interfaces are named `ComponentNameProps`
+- [ ] Animations are subtle and child-friendly
+- [ ] Large touch targets for buttons (min 44px)
+
+---
+
+## 📝 LOGGING STANDARDS
+
+```typescript
+// ✅ CORRECT - Structured logging with emojis
+console.log("=== Request Info ===");
+console.log("📸 OCR started...");
+console.log("✅ OCR completed:", text);
+console.error("❌ OCR failed:", error);
+console.warn("⚠️ Using mock data - API key missing");
+
+// ❌ WRONG - No structure or context
+console.log("processing");
+console.log(data);
+```
+
+**Emoji Guide:**
+- 📸 - OCR operations
+- 🤖 - AI/GPT operations
+- 🔥 - Firebase operations
+- ✅ - Success
+- ❌ - Error
+- ⚠️ - Warning
+- 💡 - Info
+
+---
+
+## 🎓 AI INTEGRATION GUIDELINES
+
+### OpenAI GPT Prompt Engineering
+
+```typescript
+// ✅ CORRECT - Structured prompt with clear instructions
+const systemPrompt = `당신은 ${age}살 어린이를 위한 따뜻하고 친절한 영어 선생님입니다.
+
+[당신의 역할]
+- 아이의 영어 일기를 첨삭하고 격려하는 선생님
+- 실수를 지적하기보다는 성장을 응원하는 따뜻한 멘토
+
+[중요한 원칙]
+1. 항상 긍정적이고 구체적인 칭찬으로 시작
+2. 교정은 레벨에 맞게 선택 (너무 많으면 위축됨)
+3. 설명은 ${age}살이 이해할 수 있는 쉬운 말로
+
+[응답 형식]
+반드시 JSON 형식으로만 응답하세요.`;
+```
+
+**RULES:**
+- ✅ **MUST** provide age-appropriate feedback
+- ✅ **MUST** start with positive reinforcement
+- ✅ **MUST** limit corrections based on English level
+- ✅ **MUST** include Mock fallback when API fails
+- ❌ **NEVER** criticize harshly
+- ❌ **NEVER** overwhelm with too many corrections
+
+---
+
+## 🏗️ PROJECT STRUCTURE RULES
+
+```
+app/
+├── (auth)/              # Route groups (parentheses)
+├── api/                 # API routes (route.ts)
+├── components/          # Page-specific components
+├── types/
+│   └── index.ts        # ALL types defined here
+├── utils/              # Helper functions
+├── page.tsx            # Pages
+└── layout.tsx          # Layouts
+
+components/              # Global shared components
+contexts/               # React Contexts
+lib/                    # External library configs
+```
+
+**RULES:**
+- ✅ **MUST** define shared types in `app/types/index.ts`
+- ✅ **MUST** use route groups `(name)` for organization
+- ✅ **MUST** place page-specific components in `app/components/`
+- ✅ **MUST** place global components in `components/`
+- ❌ **NEVER** create types in random files
+- ❌ **NEVER** mix component locations
+
+---
+
+## 🎯 PERFORMANCE OPTIMIZATION
+
+```typescript
+// ✅ CORRECT - Image optimization
+import Image from "next/image";
+<Image src={url} alt="..." width={500} height={300} />
+
+// ✅ CORRECT - Dynamic imports
+const HeavyComponent = dynamic(() => import('./Heavy'), {
+  loading: () => <LoadingSpinner />,
+});
+
+// ✅ CORRECT - Memoization
+const expensiveValue = useMemo(() => computeExpensive(data), [data]);
+const stableCallback = useCallback(() => handleAction(), [deps]);
+```
+
+**RULES:**
+- ✅ **MUST** use Next.js `Image` component for images
+- ✅ **MUST** use dynamic imports for heavy components
+- ✅ **MUST** use `useMemo` for expensive computations
+- ✅ **MUST** use `useCallback` for callbacks passed to children
+- ❌ **NEVER** import heavy libraries in Server Components
+- ❌ **NEVER** perform expensive operations in render
+
+---
+
+## 📚 ACCESSIBILITY (a11y) REQUIREMENTS
+
+```tsx
+// ✅ CORRECT - Semantic HTML
+<header>
+  <nav>
+    <main>
+      <footer>
+
+// ✅ CORRECT - ARIA labels
+<button aria-label="메뉴 열기" aria-expanded={isOpen}>
+  <MenuIcon />
+</button>
+
+// ✅ CORRECT - Alt text
+<img src="/logo.png" alt="Company logo" />
+<Image src={preview} alt="Uploaded diary photo preview" />
+
+// ✅ CORRECT - Focus styles
+focus:ring-2 focus:ring-blue-500 focus:outline-none
+```
+
+**RULES:**
+- ✅ **MUST** use semantic HTML tags
+- ✅ **MUST** provide ARIA labels for icon-only buttons
+- ✅ **MUST** provide alt text for all images
+- ✅ **MUST** ensure keyboard navigation works
+- ✅ **MUST** provide visible focus indicators
+- ✅ **MUST** maintain color contrast ratios (WCAG AA)
+- ❌ **NEVER** use div/span for interactive elements
+- ❌ **NEVER** remove focus outlines without replacement
+
+---
+
+## 🔄 DATA FLOW PATTERNS
+
+### Form Submission
+```
+User Input 
+  → Client Validation 
+    → API Route Call 
+      → Server Validation 
+        → Firestore Save 
+          → LocalStorage Backup 
+            → Success Feedback
+```
+
+### Authentication Flow
+```
+Login Attempt 
+  → Firebase Auth 
+    → AuthContext Update 
+      → AuthGuard Check 
+        → Protected Page Access
+```
+
+**RULES:**
+- ✅ **MUST** validate on both client and server
+- ✅ **MUST** backup critical data to localStorage
+- ✅ **MUST** provide immediate user feedback
+- ❌ **NEVER** skip validation
+- ❌ **NEVER** trust client-side data
+
+---
+
+## 💡 DECISION FLOWCHART
+
+### When to use `"use client"`?
+```
+Does component need:
+├─ useState/useReducer? → YES → "use client"
+├─ useEffect? → YES → "use client"
+├─ Event handlers? → YES → "use client"
+├─ Browser APIs? → YES → "use client"
+├─ Framer Motion? → YES → "use client"
+└─ None of above? → NO → Server Component
+```
+
+### Where to define types?
+```
+Is type used in:
+├─ Multiple files? → YES → app/types/index.ts
+├─ Single file? → YES → Define in same file
+└─ Need to export? → YES → app/types/index.ts
+```
+
+### Where to place components?
+```
+Is component used in:
+├─ Multiple pages? → YES → components/
+├─ Single page/feature? → YES → app/components/
+└─ Specific route? → YES → app/[route]/components/
+```
+
+---
+
+## 🎬 EXAMPLE: PERFECT COMPONENT
+
+```typescript
+"use client";
+
+import { useState, useCallback } from "react";
+import { motion } from "framer-motion";
+
+// 1. Props interface (exported for reuse)
+export interface DiaryUploadProps {
+  onUploadComplete: (result: CorrectionResult) => void;
+  maxFileSize?: number;
+}
+
+// 2. Component with explicit typing
+export default function DiaryUpload({ 
+  onUploadComplete,
+  maxFileSize = 5 * 1024 * 1024 // 5MB
+}: DiaryUploadProps) {
+  // 3. State with explicit types
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // 4. Memoized callback
+  const handleUpload = useCallback(async () => {
+    if (!file) {
+      setError("파일을 선택해주세요");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log("📸 Starting upload...");
+      
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log("✅ Upload completed");
+        onUploadComplete(result.data);
+      } else {
+        throw new Error(result.error || "Unknown error");
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("❌ Upload error:", error);
+      setError(error.message || "업로드 중 오류가 발생했습니다");
+    } finally {
+      setLoading(false);
+    }
+  }, [file, onUploadComplete]);
+
+  // 5. Render with proper styling and animation
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-2xl p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl"
+    >
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+        영어 일기 업로드
+      </h2>
+
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+        className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      />
+
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-4 bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg"
+        >
+          {error}
+        </motion.div>
+      )}
+
+      <button
+        onClick={handleUpload}
+        disabled={!file || loading}
+        className={`
+          mt-6 w-full
+          bg-gradient-to-r from-blue-500 to-purple-500 
+          text-white font-bold 
+          py-4 px-8 
+          rounded-lg shadow-lg 
+          transition-all
+          ${!file || loading 
+            ? "opacity-50 cursor-not-allowed" 
+            : "hover:scale-105 hover:shadow-xl"
+          }
+        `}
+      >
+        {loading ? "업로드 중..." : "업로드하기 🚀"}
+      </button>
+    </motion.div>
+  );
+}
+```
+
+---
+
+## 🎓 REMEMBER: THE 3 COMMANDMENTS
+
+1. **TYPE EVERYTHING** - Zero tolerance for `any`
+2. **HANDLE ALL ERRORS** - No silent failures
+3. **BE CHILD-FRIENDLY** - Warm, encouraging, accessible
+
+---
+
+**When in doubt, ASK rather than GUESS. Quality over speed. User experience over developer convenience.**
+
+---
+
+*Last Updated: 2025-12-16*  
+*Project: English Diary AI Correction for Children*

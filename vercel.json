@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/penpal/check-pending-letters",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
+
