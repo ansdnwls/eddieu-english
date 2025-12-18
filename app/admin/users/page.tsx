@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc, getDoc } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import AdminLayout from "../layout";
 import { motion } from "framer-motion";
@@ -21,85 +21,97 @@ export default function UsersPage() {
   const [selectedTab, setSelectedTab] = useState<"users" | "children">("users");
 
   useEffect(() => {
-    const loadUsers = async () => {
-      if (!db) {
-        setLoading(false);
-        return;
-      }
+    if (!db) {
+      setLoading(false);
+      return;
+    }
 
-      const firestoreDb = db as NonNullable<typeof db>;
+    const firestoreDb = db as NonNullable<typeof db>;
 
-      try {
-        console.log("📊 Loading users from Firestore...");
-        
-        // 사용자 정보 로드 (children 컬렉션에서)
-        const childrenSnapshot = await getDocs(collection(firestoreDb, "children"));
-        console.log("👥 Total children documents:", childrenSnapshot.size);
-        
-        const userList: User[] = [];
+    console.log("📊 Setting up real-time listener for users...");
+    setLoading(true);
 
-        // 먼저 모든 일기를 한 번만 로드
-        const diariesSnapshot = await getDocs(collection(firestoreDb, "diaries"));
-        const allDiaries = diariesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          userId: doc.data().userId,
-        }));
-        
-        console.log("📝 Total diaries:", allDiaries.length);
-
-        for (const childDoc of childrenSnapshot.docs) {
-          const childData = childDoc.data();
+    // 실시간 리스너 설정
+    const unsubscribeChildren = onSnapshot(
+      collection(firestoreDb, "children"),
+      async (childrenSnapshot) => {
+        try {
+          console.log("🔄 Children collection updated, reloading users...");
+          console.log("👥 Total children documents:", childrenSnapshot.size);
           
-          console.log("👤 User data:", {
-            id: childDoc.id,
-            childName: childData.childName,
-            email: childData.email,
-            parentId: childData.parentId,
-          });
-          
-          // 해당 사용자의 일기 수 계산 (최적화)
-          const userDiaries = allDiaries.filter(
-            (d) => d.userId === childDoc.id
-          );
+          const userList: User[] = [];
 
-          // 이메일 정보 가져오기
-          // 1. childData에 이메일이 있으면 사용
-          // 2. 없으면 parentId로 부모 정보에서 가져오기 시도
-          let userEmail = childData.email || null;
+          // 먼저 모든 일기를 한 번만 로드
+          const diariesSnapshot = await getDocs(collection(firestoreDb, "diaries"));
+          const allDiaries = diariesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            userId: doc.data().userId,
+          }));
           
-          if (!userEmail && childData.parentId) {
-            try {
-              const parentRef = doc(firestoreDb, "parents", childData.parentId);
-              const parentSnap = await getDoc(parentRef);
-              if (parentSnap.exists()) {
-                userEmail = parentSnap.data().email || null;
+          console.log("📝 Total diaries:", allDiaries.length);
+
+          for (const childDoc of childrenSnapshot.docs) {
+            const childData = childDoc.data();
+            
+            console.log("👤 User data:", {
+              id: childDoc.id,
+              childName: childData.childName,
+              email: childData.email,
+              parentId: childData.parentId,
+            });
+            
+            // 해당 사용자의 일기 수 계산 (최적화)
+            const userDiaries = allDiaries.filter(
+              (d) => d.userId === childDoc.id
+            );
+
+            // 이메일 정보 가져오기
+            // 1. childData에 이메일이 있으면 사용
+            // 2. 없으면 parentId로 부모 정보에서 가져오기 시도
+            let userEmail = childData.email || null;
+            
+            if (!userEmail && childData.parentId) {
+              try {
+                const parentRef = doc(firestoreDb, "parents", childData.parentId);
+                const parentSnap = await getDoc(parentRef);
+                if (parentSnap.exists()) {
+                  userEmail = parentSnap.data().email || null;
+                }
+              } catch (err) {
+                console.log("⚠️ Could not fetch parent email:", err);
               }
-            } catch (err) {
-              console.log("⚠️ Could not fetch parent email:", err);
             }
+
+            userList.push({
+              id: childDoc.id,
+              email: userEmail || `UID: ${childDoc.id.substring(0, 8)}...`,
+              createdAt: childData.createdAt,
+              lastLogin: childData.lastLogin,
+              childInfo: childData,
+              diaryCount: userDiaries.length,
+            });
           }
 
-          userList.push({
-            id: childDoc.id,
-            email: userEmail || `UID: ${childDoc.id.substring(0, 8)}...`,
-            createdAt: childData.createdAt,
-            lastLogin: childData.lastLogin,
-            childInfo: childData,
-            diaryCount: userDiaries.length,
-          });
+          console.log("✅ Loaded users:", userList.length);
+          setUsers(userList);
+        } catch (error) {
+          console.error("❌ Error loading users:", error);
+        } finally {
+          setLoading(false);
         }
-
-        console.log("✅ Loaded users:", userList.length);
-        setUsers(userList);
-      } catch (error) {
-        console.error("❌ Error loading users:", error);
-      } finally {
+      },
+      (error) => {
+        console.error("❌ Error in real-time listener:", error);
         setLoading(false);
       }
-    };
+    );
 
-    loadUsers();
-  }, []);
+    // 클린업 함수
+    return () => {
+      console.log("🧹 Cleaning up real-time listener");
+      unsubscribeChildren();
+    };
+  }, [db]);
 
   const handleBlockUser = async (userId: string) => {
     if (!confirm("정말 이 사용자를 차단하시겠습니까?")) return;

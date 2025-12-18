@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import AdminLayout from "./layout";
 import { motion } from "framer-motion";
@@ -20,31 +20,39 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadStats = async () => {
-      if (!db) {
-        setLoading(false);
-        return;
-      }
+    if (!db) {
+      setLoading(false);
+      return;
+    }
 
+    const firestoreDb = db as NonNullable<typeof db>;
+    
+    console.log("📊 Setting up real-time listeners for admin dashboard...");
+    setLoading(true);
+
+    // 통계 계산 함수
+    const calculateStats = async (
+      childrenSnapshot: any,
+      diariesSnapshot: any
+    ) => {
       try {
         // 총 사용자 수
-        const usersSnapshot = await getDocs(collection(db, "children"));
-        const totalUsers = usersSnapshot.size;
-        const totalChildren = usersSnapshot.size; // 아이 수
+        const totalUsers = childrenSnapshot.size;
+        const totalChildren = childrenSnapshot.size;
 
         // 오늘 날짜
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString();
 
-        // 오늘 작성된 일기 수
-        const diariesSnapshot = await getDocs(collection(db, "diaries"));
-        const allDiaries = diariesSnapshot.docs.map(doc => ({
+        // 모든 일기 데이터
+        const allDiaries = diariesSnapshot.docs.map((doc: any) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
+        // 오늘 작성된 일기 수
         const todayDiaries = allDiaries.filter((diary: any) => {
+          if (!diary.createdAt) return false;
           const diaryDate = new Date(diary.createdAt);
           return diaryDate >= today;
         }).length;
@@ -58,9 +66,11 @@ export default function AdminDashboard() {
 
         // 최근 활동 (최근 일기 5개)
         const recentActivity = allDiaries
-          .sort((a: any, b: any) => 
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )
+          .sort((a: any, b: any) => {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+          })
           .slice(0, 5);
 
         setStats({
@@ -71,15 +81,56 @@ export default function AdminDashboard() {
           levelDistribution,
           recentActivity,
         });
+        
+        setLoading(false);
+        console.log("✅ Stats updated:", {
+          totalUsers,
+          todayDiaries,
+          recentActivity: recentActivity.length,
+        });
       } catch (error) {
-        console.error("Error loading stats:", error);
-      } finally {
+        console.error("❌ Error calculating stats:", error);
         setLoading(false);
       }
     };
 
-    loadStats();
-  }, []);
+    // children 컬렉션 실시간 리스너
+    const unsubscribeChildren = onSnapshot(
+      collection(firestoreDb, "children"),
+      async (childrenSnapshot) => {
+        console.log("🔄 Children collection updated");
+        // diaries도 함께 로드
+        const diariesSnapshot = await getDocs(collection(firestoreDb, "diaries"));
+        await calculateStats(childrenSnapshot, diariesSnapshot);
+      },
+      (error) => {
+        console.error("❌ Error in children listener:", error);
+        setLoading(false);
+      }
+    );
+
+    // diaries 컬렉션 실시간 리스너
+    const unsubscribeDiaries = onSnapshot(
+      collection(firestoreDb, "diaries"),
+      async (diariesSnapshot) => {
+        console.log("🔄 Diaries collection updated");
+        // children도 함께 로드
+        const childrenSnapshot = await getDocs(collection(firestoreDb, "children"));
+        await calculateStats(childrenSnapshot, diariesSnapshot);
+      },
+      (error) => {
+        console.error("❌ Error in diaries listener:", error);
+        setLoading(false);
+      }
+    );
+
+    // 클린업 함수
+    return () => {
+      console.log("🧹 Cleaning up real-time listeners");
+      unsubscribeChildren();
+      unsubscribeDiaries();
+    };
+  }, [db]);
 
   if (loading) {
     return (

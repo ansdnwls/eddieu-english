@@ -526,9 +526,8 @@ export default function Home() {
           </motion.div>
         )}
 
-        {!user ? (
-          /* 로그인하지 않은 경우 - 프로페셔널 랜딩 페이지 */
-          <div className="space-y-32">
+        {/* 항상 랜딩 페이지 표시 */}
+        <div className="space-y-32">
             {/* 히어로 섹션 - 플래시 효과 */}
             <section className="relative overflow-hidden">
               {/* 배경 그라디언트 애니메이션 */}
@@ -858,241 +857,22 @@ export default function Home() {
 
                 <div className="relative z-10">
                   <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
-                    지금 바로 시작해보세요
+                    {user ? "대시보드에서 일기를 작성해보세요" : "지금 바로 시작해보세요"}
                   </h2>
                   <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-                    무료로 회원가입하고 AI 첨삭을 경험해보세요
+                    {user ? "AI 첨삭과 학습 분석을 확인하세요" : "무료로 회원가입하고 AI 첨삭을 경험해보세요"}
                   </p>
                   <Link
-                    href="/signup"
+                    href={user ? "/dashboard" : "/signup"}
                     className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-blue-600 bg-white rounded-xl hover:bg-gray-100 transition-all hover:scale-105 shadow-xl"
                   >
-                    무료로 시작하기
+                    {user ? "대시보드로 가기" : "무료로 시작하기"}
                     <span className="ml-2">→</span>
                   </Link>
                 </div>
               </motion.div>
             </section>
           </div>
-        ) : isLoading || isOcrLoading ? (
-          /* 로딩 중 */
-          <div className="flex items-center justify-center min-h-[400px]">
-            <LoadingSpinner />
-          </div>
-        ) : result ? (
-          /* 첨삭 결과 표시 */
-          <CorrectionResult result={result} />
-        ) : showOcrEdit ? (
-          /* OCR 수정 화면 */
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-                📝 OCR 결과 확인 및 수정
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                스캔된 내용을 확인하고 필요하면 수정해주세요. 아이 글씨가 잘 인식되지 않았을 수 있어요.
-              </p>
-
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  일기 내용
-                </label>
-                <textarea
-                  value={editedText}
-                  onChange={(e) => setEditedText(e.target.value)}
-                  className="w-full h-64 px-4 py-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  placeholder="일기 내용을 입력하거나 수정하세요..."
-                />
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  💡 잘못 인식된 부분이 있다면 여기서 수정해주세요!
-                </p>
-              </div>
-
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4"
-                >
-                  {error}
-                </motion.div>
-              )}
-
-              <div className="flex gap-4">
-                <button
-                  onClick={() => {
-                    setShowOcrEdit(false);
-                    setOcrResult("");
-                    setEditedText("");
-                  }}
-                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-all"
-                >
-                  ← 다시 촬영하기
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={!editedText.trim()}
-                  className={`flex-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all ${
-                    editedText.trim()
-                      ? "hover:scale-105 hover:shadow-xl"
-                      : "opacity-50 cursor-not-allowed"
-                  }`}
-                >
-                  🤖 AI 첨삭 시작하기 →
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        ) : (
-          /* 로그인 후 - 사진 업로드와 첨삭 시작하기만 표시 */
-          <div className="space-y-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center mb-8"
-            >
-              <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-                {currentAccountType === "child" ? "영어 일기 첨삭하기" : "영어 작문 첨삭하기"}
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                {currentAccountType === "child" 
-                  ? "아이가 쓴 영어 일기를 사진으로 업로드해주세요" 
-                  : "사진으로 업로드하거나 직접 타이핑해주세요"}
-              </p>
-            </motion.div>
-
-            {/* 부모 계정일 때만 입력 모드 선택 */}
-            {currentAccountType === "parent" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex justify-center gap-4 mb-6"
-              >
-                <button
-                  onClick={() => {
-                    setInputMode("photo");
-                    setDirectText("");
-                  }}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                    inputMode === "photo"
-                      ? "bg-blue-500 text-white shadow-lg"
-                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                  }`}
-                >
-                  📸 사진 업로드
-                </button>
-                <button
-                  onClick={() => {
-                    setInputMode("typing");
-                    setSelectedImage(null);
-                  }}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                    inputMode === "typing"
-                      ? "bg-blue-500 text-white shadow-lg"
-                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                  }`}
-                >
-                  ⌨️ 직접 타이핑
-                </button>
-              </motion.div>
-            )}
-
-            {/* 사진 업로드 모드 */}
-            {inputMode === "photo" && (
-              <>
-                <ImageUpload
-                  onImageSelect={setSelectedImage}
-                  selectedImage={selectedImage}
-                />
-
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg"
-                  >
-                    {error}
-                  </motion.div>
-                )}
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  className="text-center"
-                >
-                  <button
-                    onClick={handleOCR}
-                    disabled={!selectedImage}
-                    className={`bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-4 px-12 rounded-full shadow-lg transition-all ${
-                      selectedImage
-                        ? "hover:scale-105 hover:shadow-xl"
-                        : "opacity-50 cursor-not-allowed"
-                    }`}
-                  >
-                    📸 분석 시작하기 🚀
-                  </button>
-                </motion.div>
-              </>
-            )}
-
-            {/* 직접 타이핑 모드 (부모 계정 전용) */}
-            {inputMode === "typing" && currentAccountType === "parent" && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-4"
-              >
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    영어 작문 입력
-                  </label>
-                  <textarea
-                    value={directText}
-                    onChange={(e) => setDirectText(e.target.value)}
-                    placeholder="영어 작문을 여기에 입력해주세요..."
-                    className="w-full min-h-[300px] px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  />
-                  <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    {directText.length} 글자
-                  </div>
-                </div>
-
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg"
-                  >
-                    {error}
-                  </motion.div>
-                )}
-
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-center"
-                >
-                  <button
-                    onClick={handleDirectSubmit}
-                    disabled={!directText.trim()}
-                    className={`bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-4 px-12 rounded-full shadow-lg transition-all ${
-                      directText.trim()
-                        ? "hover:scale-105 hover:shadow-xl"
-                        : "opacity-50 cursor-not-allowed"
-                    }`}
-                  >
-                    🤖 AI 첨삭 시작하기 🚀
-                  </button>
-                </motion.div>
-              </motion.div>
-            )}
-          </div>
-        )}
       </main>
 
       {/* 푸터 - 프로페셔널 디자인 */}
