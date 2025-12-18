@@ -138,7 +138,7 @@ export default function PostDetailPage() {
         content: commentContent.trim(),
         authorId: user.uid,
         authorName,
-        authorEmail: user.email,
+        authorEmail: user.email || undefined,
         childName: childName, // 아이 이름 추가
         likes: [],
         isDeleted: false,

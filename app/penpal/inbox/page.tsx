@@ -98,7 +98,6 @@ export default function PenpalInboxPage() {
           }
 
           matchesList.push({
-            id: matchDoc.id,
             ...matchData,
             partnerChildName,
             partnerUserId,
@@ -168,7 +167,15 @@ export default function PenpalInboxPage() {
             action: null,
           };
         }
-        break;
+        return {
+          badge: (
+            <span className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-full text-sm font-semibold">
+              ⏳ 주소 확인 중
+            </span>
+          ),
+          message: "주소 정보를 확인 중입니다.",
+          action: null,
+        };
       case "admin_review":
         return {
           badge: (

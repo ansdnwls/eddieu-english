@@ -112,8 +112,9 @@ export default function AdminCancelRequestsPage() {
         return;
       }
 
+      const firestoreDb = db as NonNullable<typeof db>;
       const deletePromises = Array.from(selectedRequests).map((requestId) =>
-        deleteDoc(doc(db, "penpalCancelRequests", requestId))
+        deleteDoc(doc(firestoreDb, "penpalCancelRequests", requestId))
       );
 
       await Promise.all(deletePromises);

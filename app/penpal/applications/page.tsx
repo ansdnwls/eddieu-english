@@ -179,6 +179,11 @@ export default function PenpalApplicationsPage() {
   };
 
   const handleReject = async (application: ApplicationWithProfile) => {
+    if (!db) {
+      alert("데이터베이스 연결 오류");
+      return;
+    }
+
     if (!confirm(`${application.applicantChildName}님의 펜팔 신청을 거절하시겠습니까?`)) {
       return;
     }

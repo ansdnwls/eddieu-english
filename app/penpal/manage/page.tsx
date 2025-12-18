@@ -91,7 +91,6 @@ export default function PenpalManagePage() {
           }
 
           matchesList.push({
-            id: matchDoc.id,
             ...matchData,
             partnerChildName,
             partnerUserId,

@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     );
 
     // MP3 파일로 반환
-    return new NextResponse(audioBuffer, {
+    return new NextResponse(new Uint8Array(audioBuffer), {
       status: 200,
       headers: {
         "Content-Type": "audio/mpeg",

@@ -29,10 +29,17 @@ export default function AIPage() {
           limit(100)
         );
         const snapshot = await getDocs(q);
+        
+        interface DiaryWithCorrection {
+          id: string;
+          correctedText?: string;
+          [key: string]: any;
+        }
+
         const diaryList = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        }));
+        })) as DiaryWithCorrection[];
 
         setDiaries(diaryList);
         setStats({

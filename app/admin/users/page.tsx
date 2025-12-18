@@ -27,17 +27,19 @@ export default function UsersPage() {
         return;
       }
 
+      const firestoreDb = db as NonNullable<typeof db>;
+
       try {
         console.log("📊 Loading users from Firestore...");
         
         // 사용자 정보 로드 (children 컬렉션에서)
-        const childrenSnapshot = await getDocs(collection(db, "children"));
+        const childrenSnapshot = await getDocs(collection(firestoreDb, "children"));
         console.log("👥 Total children documents:", childrenSnapshot.size);
         
         const userList: User[] = [];
 
         // 먼저 모든 일기를 한 번만 로드
-        const diariesSnapshot = await getDocs(collection(db, "diaries"));
+        const diariesSnapshot = await getDocs(collection(firestoreDb, "diaries"));
         const allDiaries = diariesSnapshot.docs.map(doc => ({
           id: doc.id,
           userId: doc.data().userId,
@@ -67,7 +69,7 @@ export default function UsersPage() {
           
           if (!userEmail && childData.parentId) {
             try {
-              const parentRef = doc(db, "parents", childData.parentId);
+              const parentRef = doc(firestoreDb, "parents", childData.parentId);
               const parentSnap = await getDoc(parentRef);
               if (parentSnap.exists()) {
                 userEmail = parentSnap.data().email || null;
@@ -101,10 +103,17 @@ export default function UsersPage() {
 
   const handleBlockUser = async (userId: string) => {
     if (!confirm("정말 이 사용자를 차단하시겠습니까?")) return;
+    
+    if (!db) {
+      alert("데이터베이스 연결 오류");
+      return;
+    }
+
+    const firestoreDb = db as NonNullable<typeof db>;
 
     try {
       // Firestore에 차단 정보 저장
-      await updateDoc(doc(db, "children", userId), {
+      await updateDoc(doc(firestoreDb, "children", userId), {
         blocked: true,
         blockedAt: new Date().toISOString(),
       });

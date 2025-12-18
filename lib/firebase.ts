@@ -15,7 +15,7 @@ const isFirebaseConfigured = () => {
   
   // 환경 변수가 설정되어 있거나, 기본값이 유효한 경우 true 반환
   const defaultApiKey = "AIzaSyB3BDHNQRU-UvohshvC_ZeA60TprRe6vMc";
-  const hasValidDefault = defaultApiKey && defaultApiKey !== "dummy-key" && !defaultApiKey.includes("your_");
+  const hasValidDefault = defaultApiKey.length > 0 && !defaultApiKey.includes("your_");
   
   return envApiKey || hasValidDefault;
 };
@@ -44,7 +44,7 @@ if (typeof window !== "undefined") {
   if (!hasEnvConfig) {
     // 기본값이 유효한 경우 경고하지 않음
     const defaultApiKey = "AIzaSyB3BDHNQRU-UvohshvC_ZeA60TprRe6vMc";
-    const hasValidDefault = defaultApiKey && defaultApiKey !== "dummy-key" && !defaultApiKey.includes("your_");
+    const hasValidDefault = defaultApiKey.length > 0 && !defaultApiKey.includes("your_");
     
     if (!hasValidDefault) {
       console.warn(

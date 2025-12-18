@@ -244,7 +244,7 @@ export default function VocabularyPage() {
                     {categories.map((category) => (
                       <button
                         key={category}
-                        onClick={() => setSelectedCategory(category)}
+                        onClick={() => setSelectedCategory(category || null)}
                         className={`px-4 py-2 rounded-lg font-semibold transition-all ${
                           selectedCategory === category
                             ? "bg-blue-500 text-white"

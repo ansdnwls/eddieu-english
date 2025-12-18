@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +10,7 @@ import { db } from "@/lib/firebase";
 import { PostCategory, POST_CATEGORIES } from "@/app/types";
 import Link from "next/link";
 
-export default function WritePostPage() {
+function WritePostContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -339,6 +339,17 @@ export default function WritePostPage() {
   );
 }
 
-
-
-
+export default function WritePostPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-pink-900/20">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-700 dark:text-gray-300">페이지 로딩 중...</p>
+        </div>
+      </div>
+    }>
+      <WritePostContent />
+    </Suspense>
+  );
+}

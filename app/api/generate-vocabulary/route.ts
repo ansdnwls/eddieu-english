@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       "Lv.5": 18,
     };
 
-    const targetCount = targetCountMap[englishLevel] || 10;
+    const targetCount = targetCountMap[englishLevel as EnglishLevel] || 10;
 
     // 레벨별 설명
     const levelDescriptionMap: Record<EnglishLevel, string> = {
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       "Lv.5": "유창해요 (첨삭보단 피드백 위주로 받고 싶어요)",
     };
 
-    const levelDescription = levelDescriptionMap[englishLevel];
+    const levelDescription = levelDescriptionMap[englishLevel as EnglishLevel] || "";
 
     // 단어 목록 문자열 생성
     const wordList = words

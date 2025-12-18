@@ -212,6 +212,7 @@ export default function BoardManagementPage() {
       
       // 목록 새로고침
       const loadPosts = async () => {
+        if (!db) return;
         const q = query(collection(db, "posts"));
         const snapshot = await getDocs(q);
         const postList: Post[] = [];

@@ -22,6 +22,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const firestoreDb = db as NonNullable<typeof db>;
+
     const body: RequestBody = await request.json();
     const { matchId, usersToNotify } = body;
 
@@ -56,7 +58,7 @@ export async function POST(request: NextRequest) {
           expiresAt: expiresAt.toISOString(),
         };
 
-        return addDoc(collection(db, "addressNotifications"), notification);
+        return addDoc(collection(firestoreDb, "addressNotifications"), notification);
       });
 
     const results = await Promise.all(notificationPromises);

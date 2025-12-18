@@ -67,9 +67,10 @@ export default function DiaryList({ userId, currentAccountType: propAccountType 
         const diaryList: DiaryEntry[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data() as DiaryEntry;
+          const { id: _, ...dataWithoutId } = data;
           const entry = {
             id: doc.id,
-            ...data,
+            ...dataWithoutId,
           };
           diaryList.push(entry);
           console.log("📄 문서 ID:", doc.id, "contentType:", data.contentType, "compositionType:", data.compositionType, "accountType:", data.accountType);
@@ -147,9 +148,11 @@ export default function DiaryList({ userId, currentAccountType: propAccountType 
         return;
       }
 
+      const firestoreDb = db as NonNullable<typeof db>;
+
       // 선택된 일기들 삭제
       const deletePromises = Array.from(selectedDiaries).map(diaryId =>
-        deleteDoc(doc(db, "diaries", diaryId))
+        deleteDoc(doc(firestoreDb, "diaries", diaryId))
       );
 
       await Promise.all(deletePromises);

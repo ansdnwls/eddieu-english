@@ -94,9 +94,11 @@ export default function Home() {
   useEffect(() => {
     if (!db) return;
 
+    const firestoreDb = db as NonNullable<typeof db>;
+
     // 실시간 리스너 설정
     const q = query(
-      collection(db, "diaries"),
+      collection(firestoreDb, "diaries"),
       orderBy("featuredAt", "desc"),
       limit(1)
     );
@@ -120,7 +122,7 @@ export default function Home() {
 
               if (isToday) {
                 // 해당 사용자의 아이 이름 가져오기
-                const childRef = doc(db, "children", diaryData.userId);
+                const childRef = doc(firestoreDb, "children", diaryData.userId);
                 const childSnap = await getDoc(childRef);
                 let childName = "어린이";
                 

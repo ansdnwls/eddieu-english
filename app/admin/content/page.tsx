@@ -213,15 +213,18 @@ export default function ContentPage() {
       }
 
       const userId = diary.userId;
+      
+      // db가 null이 아님을 확인했으므로 타입 단언 사용
+      const firestoreDb = db as NonNullable<typeof db>;
 
       // 1. 일기의 featured 플래그 제거
-      await updateDoc(doc(db, "diaries", diaryId), {
+      await updateDoc(doc(firestoreDb, "diaries", diaryId), {
         featured: false,
         featuredAt: null,
       });
 
       // 2. 사용자의 배지 컬렉션에서 해당 배지 삭제
-      const badgesRef = collection(db, `users/${userId}/badges`);
+      const badgesRef = collection(firestoreDb, `users/${userId}/badges`);
       const badgesQuery = query(
         badgesRef,
         where("type", "==", "featured_diary"),
@@ -230,11 +233,11 @@ export default function ContentPage() {
       const badgesSnapshot = await getDocs(badgesQuery);
       
       badgesSnapshot.forEach(async (badgeDoc) => {
-        await deleteDoc(doc(db, `users/${userId}/badges`, badgeDoc.id));
+        await deleteDoc(doc(firestoreDb, `users/${userId}/badges`, badgeDoc.id));
       });
 
       // 3. 알림 삭제
-      const notificationsRef = collection(db, `users/${userId}/notifications`);
+      const notificationsRef = collection(firestoreDb, `users/${userId}/notifications`);
       const notificationsQuery = query(
         notificationsRef,
         where("type", "==", "badge_awarded"),
@@ -243,7 +246,7 @@ export default function ContentPage() {
       const notificationsSnapshot = await getDocs(notificationsQuery);
       
       notificationsSnapshot.forEach(async (notificationDoc) => {
-        await deleteDoc(doc(db, `users/${userId}/notifications`, notificationDoc.id));
+        await deleteDoc(doc(firestoreDb, `users/${userId}/notifications`, notificationDoc.id));
       });
 
       // 4. 목록 업데이트

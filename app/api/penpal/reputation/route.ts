@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       const reputation = {
         id: reputationDoc.id,
         ...reputationDoc.data(),
-      } as UserPenpalReputation;
+      } as unknown as UserPenpalReputation;
 
       return NextResponse.json({
         success: true,

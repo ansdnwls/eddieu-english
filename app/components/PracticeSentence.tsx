@@ -242,7 +242,7 @@ export default function PracticeSentence({ sentence, original }: PracticeSentenc
 
   // 발음기호를 색상으로 강조하여 렌더링
   const renderPhonetics = (phoneticText: string) => {
-    const parts: JSX.Element[] = [];
+    const parts: React.ReactElement[] = [];
     let currentIndex = 0;
     
     // 강세 기호 찾기: ˈ (1차 강세), ˌ (2차 강세)

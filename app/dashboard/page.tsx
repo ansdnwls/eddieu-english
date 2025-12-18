@@ -215,8 +215,11 @@ export default function DashboardPage() {
               </h1>
             </Link>
             <div className="flex items-center gap-3">
-              {/* 계정 전환 버튼 - 디버깅 추가 */}
-              {console.log("🔍 전환 버튼 렌더링:", { hasParentAccount, currentAccountType, parentInfo })}
+              {/* 계정 전환 버튼 */}
+              {(() => {
+                console.log("🔍 전환 버튼 렌더링:", { hasParentAccount, currentAccountType, parentInfo });
+                return null;
+              })()}
               {hasParentAccount && (
                 <motion.button
                   type="button"

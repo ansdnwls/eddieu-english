@@ -26,7 +26,7 @@ export function generateDiaryPDF(diaries: DiaryEntry[], childName: string) {
 
     // 일기 번호 및 날짜
     doc.setFontSize(14);
-    doc.setFont(undefined, "bold");
+    doc.setFont("helvetica", "bold");
     doc.text(
       `일기 ${index + 1} - ${new Date(diary.createdAt).toLocaleDateString("ko-KR")}`,
       20,
@@ -36,16 +36,16 @@ export function generateDiaryPDF(diaries: DiaryEntry[], childName: string) {
 
     // 레벨
     doc.setFontSize(10);
-    doc.setFont(undefined, "normal");
+    doc.setFont("helvetica", "normal");
     doc.text(`레벨: ${diary.englishLevel}`, 20, yPos);
     yPos += 8;
 
     // 원본 일기
     doc.setFontSize(11);
-    doc.setFont(undefined, "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("원본 일기:", 20, yPos);
     yPos += 7;
-    doc.setFont(undefined, "normal");
+    doc.setFont("helvetica", "normal");
     const originalLines = doc.splitTextToSize(diary.originalText, 170);
     originalLines.forEach((line: string) => {
       if (yPos > 250) {
@@ -59,10 +59,10 @@ export function generateDiaryPDF(diaries: DiaryEntry[], childName: string) {
 
     // 교정본
     doc.setFontSize(11);
-    doc.setFont(undefined, "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("교정된 일기:", 20, yPos);
     yPos += 7;
-    doc.setFont(undefined, "normal");
+    doc.setFont("helvetica", "normal");
     doc.setTextColor(0, 100, 200);
     const correctedLines = doc.splitTextToSize(diary.correctedText, 170);
     correctedLines.forEach((line: string) => {
@@ -79,7 +79,7 @@ export function generateDiaryPDF(diaries: DiaryEntry[], childName: string) {
     // 피드백
     if (diary.feedback) {
       doc.setFontSize(10);
-      doc.setFont(undefined, "italic");
+      doc.setFont("helvetica", "italic");
       const feedbackLines = doc.splitTextToSize(diary.feedback, 170);
       feedbackLines.forEach((line: string) => {
         if (yPos > 250) {
@@ -95,7 +95,7 @@ export function generateDiaryPDF(diaries: DiaryEntry[], childName: string) {
     // 통계
     if (diary.stats) {
       doc.setFontSize(9);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text(
         `단어 ${diary.stats.wordCount}개 | 문장 ${diary.stats.sentenceCount}개 | 교정 ${diary.stats.correctionCount}개`,
         20,
@@ -142,7 +142,7 @@ export function generateVocabularyPDF(words: ExtractedWord[], childName: string)
 
     // 단어 번호와 단어
     doc.setFontSize(16);
-    doc.setFont(undefined, "bold");
+    doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 100, 200);
     doc.text(`${index + 1}. ${word.word}`, 20, yPos);
     doc.setTextColor(0, 0, 0);
@@ -151,9 +151,9 @@ export function generateVocabularyPDF(words: ExtractedWord[], childName: string)
     // 의미
     if (word.meaning) {
       doc.setFontSize(12);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("뜻:", 25, yPos);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text(word.meaning, 38, yPos);
       yPos += 8;
     }
@@ -161,10 +161,10 @@ export function generateVocabularyPDF(words: ExtractedWord[], childName: string)
     // 예문
     if (word.example) {
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("예문:", 25, yPos);
       yPos += 6;
-      doc.setFont(undefined, "italic");
+      doc.setFont("helvetica", "italic");
       doc.setTextColor(50, 50, 50);
       const exampleLines = doc.splitTextToSize(word.example, 160);
       exampleLines.forEach((line: string) => {
@@ -178,10 +178,10 @@ export function generateVocabularyPDF(words: ExtractedWord[], childName: string)
     // 유의어
     if ((word as any).synonym) {
       doc.setFontSize(10);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.setTextColor(0, 150, 0);
       doc.text("유의어:", 25, yPos);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text((word as any).synonym, 45, yPos);
       doc.setTextColor(0, 0, 0);
       yPos += 7;
@@ -190,10 +190,10 @@ export function generateVocabularyPDF(words: ExtractedWord[], childName: string)
     // 반의어
     if ((word as any).antonym) {
       doc.setFontSize(10);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.setTextColor(200, 0, 0);
       doc.text("반의어:", 25, yPos);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text((word as any).antonym, 45, yPos);
       doc.setTextColor(0, 0, 0);
       yPos += 7;
@@ -202,7 +202,7 @@ export function generateVocabularyPDF(words: ExtractedWord[], childName: string)
     // 학습 팁
     if ((word as any).tip) {
       doc.setFontSize(9);
-      doc.setFont(undefined, "italic");
+      doc.setFont("helvetica", "italic");
       doc.setTextColor(100, 100, 200);
       doc.text("💡 ", 25, yPos);
       const tipLines = doc.splitTextToSize((word as any).tip, 160);

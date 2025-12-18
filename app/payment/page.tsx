@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +10,7 @@ import Link from "next/link";
 
 interface PaymentPageProps {}
 
-export default function PaymentPage({}: PaymentPageProps) {
+function PaymentPageContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -47,7 +47,7 @@ export default function PaymentPage({}: PaymentPageProps) {
         // 결제 수단 위젯 렌더링
         if (paymentMethodsWidgetRef.current) {
           const methodsWidget = widget.renderPaymentMethods(
-            paymentMethodsWidgetRef.current,
+            paymentMethodsWidgetRef.current as any,
             { value: amount },
             { variantKey: "DEFAULT" }
           );
@@ -57,7 +57,7 @@ export default function PaymentPage({}: PaymentPageProps) {
         // 이용약관 위젯 렌더링
         if (agreementWidgetRef.current) {
           const agreeWidget = widget.renderAgreement(
-            agreementWidgetRef.current,
+            agreementWidgetRef.current as any,
             { variantKey: "AGREEMENT" }
           );
           setAgreementWidget(agreeWidget);
@@ -79,11 +79,11 @@ export default function PaymentPage({}: PaymentPageProps) {
 
     // cleanup
     return () => {
-      if (paymentMethodsWidget) {
-        paymentMethodsWidget.destroy();
+      if (paymentMethodsWidget && typeof (paymentMethodsWidget as any).destroy === 'function') {
+        (paymentMethodsWidget as any).destroy();
       }
-      if (agreementWidget) {
-        agreementWidget.destroy();
+      if (agreementWidget && typeof (agreementWidget as any).destroy === 'function') {
+        (agreementWidget as any).destroy();
       }
     };
   }, [user, amount]);
@@ -258,6 +258,21 @@ export default function PaymentPage({}: PaymentPageProps) {
         </main>
       </div>
     </AuthGuard>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-pink-900/20">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-700 dark:text-gray-300">결제 페이지 로딩 중...</p>
+        </div>
+      </div>
+    }>
+      <PaymentPageContent />
+    </Suspense>
   );
 }
 
