@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import ImageUpload from "./components/ImageUpload";
@@ -13,7 +13,7 @@ import { db } from "@/lib/firebase";
 import { collection, addDoc, doc, getDoc, query, orderBy, limit, getDocs, onSnapshot } from "firebase/firestore";
 import { EnglishLevel } from "./types";
 
-export default function Home() {
+function HomeContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -57,6 +57,21 @@ export default function Home() {
       console.error("로그아웃 오류:", err);
     }
   };
+
+  // URL 파라미터 확인 (사진 업로드 모드)
+  useEffect(() => {
+    const mode = searchParams.get("mode");
+    if (mode === "upload") {
+      setInputMode("photo");
+      // 사진 업로드 섹션으로 스크롤
+      setTimeout(() => {
+        const uploadSection = document.getElementById("upload-section");
+        if (uploadSection) {
+          uploadSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
+    }
+  }, [searchParams]);
 
   // 계정 타입 로드
   useEffect(() => {
@@ -892,6 +907,154 @@ export default function Home() {
                 </div>
               </motion.div>
             </section>
+
+            {/* 로그인한 사용자를 위한 업로드 섹션 */}
+            {user && (
+              <section id="upload-section" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-800"
+                >
+                  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+                    📝 영어 일기 첨삭하기
+                  </h2>
+                  
+                  {/* 입력 모드 선택 */}
+                  <div className="flex justify-center gap-4 mb-6">
+                    <button
+                      onClick={() => {
+                        setInputMode("photo");
+                        setSelectedImage(null);
+                        setDirectText("");
+                      }}
+                      className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                        inputMode === "photo"
+                          ? "bg-blue-500 text-white shadow-lg"
+                          : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      }`}
+                    >
+                      📸 사진 업로드
+                    </button>
+                    <button
+                      onClick={() => {
+                        setInputMode("typing");
+                        setSelectedImage(null);
+                        setDirectText("");
+                      }}
+                      className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                        inputMode === "typing"
+                          ? "bg-blue-500 text-white shadow-lg"
+                          : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      }`}
+                    >
+                      ⌨️ 직접 타이핑
+                    </button>
+                  </div>
+
+                  {/* 사진 업로드 모드 */}
+                  {inputMode === "photo" && (
+                    <div className="space-y-6">
+                      <ImageUpload
+                        onImageSelect={setSelectedImage}
+                        selectedImage={selectedImage}
+                      />
+                      {selectedImage && (
+                        <div className="flex justify-center gap-4">
+                          <button
+                            onClick={handleOCR}
+                            disabled={isOcrLoading}
+                            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-all"
+                          >
+                            {isOcrLoading ? "처리 중..." : "📸 OCR 시작하기"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 직접 타이핑 모드 */}
+                  {inputMode === "typing" && (
+                    <div className="space-y-6">
+                      <textarea
+                        value={directText}
+                        onChange={(e) => setDirectText(e.target.value)}
+                        placeholder="영어 일기를 직접 입력해주세요..."
+                        rows={10}
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                      />
+                      <div className="flex justify-center">
+                        <button
+                          onClick={handleDirectSubmit}
+                          disabled={!directText.trim() || isLoading}
+                          className="px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-all"
+                        >
+                          {isLoading ? "처리 중..." : "🤖 AI 첨삭 시작하기"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* OCR 결과 편집 */}
+                  {showOcrEdit && (
+                    <div className="mt-6 space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                          OCR로 추출된 텍스트 (수정 가능)
+                        </label>
+                        <textarea
+                          value={editedText}
+                          onChange={(e) => setEditedText(e.target.value)}
+                          rows={10}
+                          className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        />
+                      </div>
+                      <div className="flex justify-center gap-4">
+                        <button
+                          onClick={handleSubmit}
+                          disabled={!editedText.trim() || isLoading}
+                          className="px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-all"
+                        >
+                          {isLoading ? "처리 중..." : "🤖 AI 첨삭 시작하기"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowOcrEdit(false);
+                            setOcrResult("");
+                            setEditedText("");
+                            setSelectedImage(null);
+                          }}
+                          className="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg transition-all"
+                        >
+                          취소
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 에러 메시지 */}
+                  {error && (
+                    <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 rounded-lg">
+                      {error}
+                    </div>
+                  )}
+
+                  {/* 로딩 스피너 */}
+                  {isLoading && (
+                    <div className="mt-6 flex justify-center">
+                      <LoadingSpinner />
+                    </div>
+                  )}
+
+                  {/* 결과 표시 */}
+                  {result && (
+                    <div className="mt-6">
+                      <CorrectionResult result={result} />
+                    </div>
+                  )}
+                </motion.div>
+              </section>
+            )}
           </div>
       </main>
 
@@ -971,5 +1134,20 @@ export default function Home() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-pink-900/20">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">로딩 중...</p>
+        </div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }

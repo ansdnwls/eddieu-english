@@ -381,7 +381,7 @@ export default function DashboardPage() {
               </div>
 
               {/* 메인 기능 버튼 */}
-              <Link href="/">
+              <Link href="/?mode=upload">
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
