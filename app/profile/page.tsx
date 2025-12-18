@@ -4,8 +4,10 @@ import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { deleteUser } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import AuthGuard from "@/components/AuthGuard";
-import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc, addDoc, collection, deleteDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import EnglishLevelSelector from "@/app/components/EnglishLevelSelector";
 import { EnglishLevel } from "@/app/types";
@@ -28,7 +30,7 @@ interface ParentInfo {
 const avatars = ["👦", "👧", "🧒", "👶", "🎭", "🦸", "🧙", "👨‍🚀"];
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,6 +40,10 @@ export default function ProfilePage() {
   const [hasParentAccount, setHasParentAccount] = useState(false);
   const [addParent, setAddParent] = useState(false);
   const [parentName, setParentName] = useState("");
+  const [showWithdrawal, setShowWithdrawal] = useState(false);
+  const [withdrawalReason, setWithdrawalReason] = useState("");
+  const [withdrawalDetail, setWithdrawalDetail] = useState("");
+  const [withdrawing, setWithdrawing] = useState(false);
   const [formData, setFormData] = useState<ChildInfo>({
     childName: "",
     parentId: user?.uid || "",
@@ -175,6 +181,95 @@ export default function ProfilePage() {
     }
   };
 
+  const handleWithdrawal = async () => {
+    if (!withdrawalReason) {
+      setError("탈퇴 사유를 선택해주세요.");
+      return;
+    }
+
+    if (!confirm("정말 회원탈퇴를 하시겠습니까?\n\n모든 데이터가 삭제되며 복구할 수 없습니다.")) {
+      return;
+    }
+
+    if (!user || !db) {
+      setError("로그인이 필요합니다.");
+      return;
+    }
+
+    setWithdrawing(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const firestoreDb = db as NonNullable<typeof db>;
+
+      // 1. 탈퇴 이력 저장 (관리자 확인용)
+      const withdrawalRecord = {
+        userId: user.uid,
+        userEmail: user.email || "",
+        childName: formData.childName || "",
+        reason: withdrawalReason,
+        detail: withdrawalDetail || "",
+        withdrawnAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+
+      await addDoc(collection(firestoreDb, "withdrawalRequests"), withdrawalRecord);
+
+      // 2. 사용자 데이터 삭제
+      // children 컬렉션에서 삭제
+      await deleteDoc(doc(firestoreDb, "children", user.uid));
+      
+      // parents 컬렉션에서 삭제 (있다면)
+      const parentRef = doc(firestoreDb, "parents", user.uid);
+      const parentSnap = await getDoc(parentRef);
+      if (parentSnap.exists()) {
+        await deleteDoc(parentRef);
+      }
+
+      // 사용자의 일기들 삭제
+      const diariesQuery = query(
+        collection(firestoreDb, "diaries"),
+        where("userId", "==", user.uid)
+      );
+      const diariesSnapshot = await getDocs(diariesQuery);
+      for (const diaryDoc of diariesSnapshot.docs) {
+        await deleteDoc(doc(firestoreDb, "diaries", diaryDoc.id));
+      }
+
+      // 구독 정보 삭제 (있다면)
+      const subscriptionsQuery = query(
+        collection(firestoreDb, "subscriptions"),
+        where("userId", "==", user.uid)
+      );
+      const subscriptionsSnapshot = await getDocs(subscriptionsQuery);
+      for (const subDoc of subscriptionsSnapshot.docs) {
+        await deleteDoc(doc(firestoreDb, "subscriptions", subDoc.id));
+      }
+
+      // Firebase Auth 계정 삭제
+      if (auth && user) {
+        try {
+          await deleteUser(user);
+          console.log("✅ Firebase Auth 계정 삭제 완료");
+        } catch (authError: any) {
+          console.error("Firebase Auth 계정 삭제 오류:", authError);
+          // Auth 계정 삭제 실패해도 Firestore 데이터는 삭제되었으므로 계속 진행
+        }
+      }
+
+      setSuccess("탈퇴가 완료되었습니다. 이용해주셔서 감사합니다.");
+      
+      // 2초 후 홈으로 이동
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
+    } catch (err: any) {
+      setError("탈퇴 처리 중 오류가 발생했습니다: " + err.message);
+      setWithdrawing(false);
+    }
+  };
+
   if (loading) {
     return (
       <AuthGuard>
@@ -200,7 +295,7 @@ export default function ProfilePage() {
             <div className="text-center mb-8">
               <div className="text-5xl mb-4">{formData.avatar}</div>
               <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-                프로필 수정
+                프로필 관리
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
                 아이의 정보를 업데이트하세요
@@ -461,6 +556,87 @@ export default function ProfilePage() {
                 </button>
               </div>
             </form>
+
+            {/* 회원탈퇴 섹션 */}
+            <div className="mt-12 pt-8 border-t-2 border-red-200 dark:border-red-800">
+              <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-6">
+                <h2 className="text-xl font-bold text-red-700 dark:text-red-400 mb-2">
+                  ⚠️ 회원탈퇴
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  회원탈퇴를 하시면 모든 데이터가 삭제되며 복구할 수 없습니다.
+                </p>
+                
+                {!showWithdrawal ? (
+                  <button
+                    onClick={() => setShowWithdrawal(true)}
+                    className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all"
+                  >
+                    회원탈퇴 신청하기
+                  </button>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        탈퇴 사유 *
+                      </label>
+                      <select
+                        value={withdrawalReason}
+                        onChange={(e) => setWithdrawalReason(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      >
+                        <option value="">선택해주세요</option>
+                        <option value="서비스 불만">서비스 불만</option>
+                        <option value="사용 빈도 낮음">사용 빈도 낮음</option>
+                        <option value="다른 서비스 이용">다른 서비스 이용</option>
+                        <option value="개인정보 우려">개인정보 우려</option>
+                        <option value="가격 부담">가격 부담</option>
+                        <option value="기타">기타</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        상세 사유 (선택사항)
+                      </label>
+                      <textarea
+                        value={withdrawalDetail}
+                        onChange={(e) => setWithdrawalDetail(e.target.value)}
+                        rows={4}
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                        placeholder="탈퇴 사유를 자세히 알려주시면 서비스 개선에 도움이 됩니다."
+                      />
+                    </div>
+
+                    <div className="flex gap-4">
+                      <button
+                        onClick={handleWithdrawal}
+                        disabled={!withdrawalReason || withdrawing}
+                        className={`flex-1 px-6 py-3 bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-all ${
+                          !withdrawalReason || withdrawing
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
+                      >
+                        {withdrawing ? "처리 중..." : "탈퇴 신청하기"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowWithdrawal(false);
+                          setWithdrawalReason("");
+                          setWithdrawalDetail("");
+                        }}
+                        disabled={withdrawing}
+                        className="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg transition-all"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </motion.div>
         </div>
       </div>

@@ -1,66 +1,108 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { collection, getDocs, query, orderBy, where, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+interface PricingPlan {
+  id: string;
+  name: string;
+  price: number;
+  period: "영구" | "월" | "년";
+  description: string;
+  features: string[];
+  buttonText: string;
+  popular: boolean;
+  color: "gray" | "blue" | "purple";
+  orderId: string;
+  isActive: boolean;
+}
 
 export default function PricingPage() {
   const { user } = useAuth();
+  const [plans, setPlans] = useState<PricingPlan[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const plans = [
-    {
-      name: "무료",
-      price: 0,
-      period: "영구",
-      description: "기본 기능을 무료로 이용하세요",
-      features: [
-        "일기 첨삭 5회/월",
-        "기본 AI 피드백",
-        "단어장 기능",
-        "기본 통계",
-      ],
-      buttonText: "지금 시작하기",
-      buttonLink: user ? "/dashboard" : "/signup",
-      popular: false,
-      color: "gray",
-    },
-    {
-      name: "베이직",
-      price: 9900,
-      period: "월",
-      description: "개인 학습자에게 적합한 플랜",
-      features: [
-        "일기 첨삭 무제한",
-        "상세 AI 피드백",
-        "단어장 + 발음 연습",
-        "상세 통계 및 리포트",
-        "월간 성장 리포트",
-      ],
-      buttonText: "구독하기",
-      buttonLink: "/payment?amount=9900&orderName=베이직 플랜&orderId=plan_basic",
-      popular: true,
-      color: "blue",
-    },
-    {
-      name: "프리미엄",
-      price: 19900,
-      period: "월",
-      description: "전문적인 학습 관리가 필요한 경우",
-      features: [
-        "일기 첨삭 무제한",
-        "프리미엄 AI 피드백",
-        "단어장 + 발음 연습 + TTS",
-        "상세 통계 및 리포트",
-        "월간 성장 리포트",
-        "우선 고객 지원",
-        "펜팔 기능",
-      ],
-      buttonText: "구독하기",
-      buttonLink: "/payment?amount=19900&orderName=프리미엄 플랜&orderId=plan_premium",
-      popular: false,
-      color: "purple",
-    },
-  ];
+  useEffect(() => {
+    if (!db) {
+      setLoading(false);
+      return;
+    }
+
+    const firestoreDb = db as NonNullable<typeof db>;
+
+    // 실시간 리스너 설정
+    const unsubscribe = onSnapshot(
+      query(
+        collection(firestoreDb, "pricingPlans"),
+        where("isActive", "==", true),
+        orderBy("price", "asc")
+      ),
+      (snapshot) => {
+        const plansList = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as PricingPlan[];
+
+        // 무료 플랜이 없으면 기본 무료 플랜 추가
+        if (plansList.length === 0 || plansList[0].price > 0) {
+          const freePlan: PricingPlan = {
+            id: "free",
+            name: "무료",
+            price: 0,
+            period: "영구",
+            description: "기본 기능을 무료로 이용하세요",
+            features: [
+              "일기 첨삭 5회/월",
+              "기본 AI 피드백",
+              "단어장 기능",
+              "기본 통계",
+            ],
+            buttonText: "지금 시작하기",
+            popular: false,
+            color: "gray",
+            orderId: "plan_free",
+            isActive: true,
+          };
+          setPlans([freePlan, ...plansList]);
+        } else {
+          setPlans(plansList);
+        }
+
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error loading pricing plans:", error);
+        // 오류 시 기본 플랜 사용
+        setPlans([
+          {
+            id: "free",
+            name: "무료",
+            price: 0,
+            period: "영구",
+            description: "기본 기능을 무료로 이용하세요",
+            features: [
+              "일기 첨삭 5회/월",
+              "기본 AI 피드백",
+              "단어장 기능",
+              "기본 통계",
+            ],
+            buttonText: "지금 시작하기",
+            popular: false,
+            color: "gray",
+            orderId: "plan_free",
+            isActive: true,
+          },
+        ]);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [db]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -147,9 +189,23 @@ export default function PricingPage() {
           </p>
         </motion.div>
 
-        {/* 요금제 카드 */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {plans.map((plan, index) => (
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">요금제를 불러오는 중...</p>
+            </div>
+          </div>
+        ) : (
+          /* 요금제 카드 */
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            {plans.map((plan, index) => {
+              // 버튼 링크 생성
+              const buttonLink = plan.price === 0
+                ? (user ? "/dashboard" : "/signup")
+                : `/payment?amount=${plan.price}&orderName=${encodeURIComponent(plan.name)} 플랜&orderId=${plan.orderId}`;
+
+              return (
             <motion.div
               key={plan.name}
               initial={{ opacity: 0, y: 20 }}
@@ -205,7 +261,7 @@ export default function PricingPage() {
               </ul>
 
               <Link
-                href={plan.buttonLink}
+                href={buttonLink}
                 className={`block w-full text-center py-3 px-6 rounded-lg font-semibold transition-all ${
                   plan.popular
                     ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg hover:scale-105"
@@ -217,8 +273,10 @@ export default function PricingPage() {
                 {plan.buttonText}
               </Link>
             </motion.div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* FAQ 섹션 */}
         <motion.div

@@ -582,27 +582,47 @@ export default function Home() {
                     transition={{ delay: 0.4 }}
                     className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12"
                   >
-                    <Link
-                      href="/signup"
-                      className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-xl hover:shadow-2xl transition-all hover:scale-105"
-                    >
-                      <span className="relative z-10">무료로 시작하기</span>
-                      <motion.span
-                        className="ml-2"
-                        animate={{ x: [0, 5, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
+                    {user ? (
+                      <Link
+                        href="/dashboard"
+                        className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-xl hover:shadow-2xl transition-all hover:scale-105"
                       >
-                        →
-                      </motion.span>
-                      {/* Hover 효과 */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-purple-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    </Link>
-                    <Link
-                      href="/login"
-                      className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-xl hover:border-blue-600 dark:hover:border-blue-500 transition-all"
-                    >
-                      로그인
-                    </Link>
+                        <span className="relative z-10">대시보드로 가기</span>
+                        <motion.span
+                          className="ml-2"
+                          animate={{ x: [0, 5, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        >
+                          →
+                        </motion.span>
+                        {/* Hover 효과 */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-purple-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      </Link>
+                    ) : (
+                      <>
+                        <Link
+                          href="/signup"
+                          className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-xl hover:shadow-2xl transition-all hover:scale-105"
+                        >
+                          <span className="relative z-10">무료로 시작하기</span>
+                          <motion.span
+                            className="ml-2"
+                            animate={{ x: [0, 5, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          >
+                            →
+                          </motion.span>
+                          {/* Hover 효과 */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-purple-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        </Link>
+                        <Link
+                          href="/login"
+                          className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-xl hover:border-blue-600 dark:hover:border-blue-500 transition-all"
+                        >
+                          로그인
+                        </Link>
+                      </>
+                    )}
                   </motion.div>
 
                   {/* 통계 - 신뢰도 향상 */}

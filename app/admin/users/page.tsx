@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc, getDoc, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc, getDoc, onSnapshot, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import AdminLayout from "../layout";
 import { motion } from "framer-motion";
@@ -15,10 +15,39 @@ interface User {
   diaryCount?: number;
 }
 
+interface WithdrawalRequest {
+  id: string;
+  userId: string;
+  userEmail: string;
+  childName: string;
+  reason: string;
+  detail: string;
+  withdrawnAt: string;
+  createdAt: string;
+}
+
+interface UserStats {
+  totalUsers: number;
+  newUsersToday: number;
+  basicNewUsers: number;
+  basicTotalUsers: number;
+  premiumNewUsers: number;
+  premiumTotalUsers: number;
+}
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<"users" | "children">("users");
+  const [selectedTab, setSelectedTab] = useState<"users" | "children" | "withdrawals">("users");
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
+  const [userStats, setUserStats] = useState<UserStats>({
+    totalUsers: 0,
+    newUsersToday: 0,
+    basicNewUsers: 0,
+    basicTotalUsers: 0,
+    premiumNewUsers: 0,
+    premiumTotalUsers: 0,
+  });
 
   useEffect(() => {
     if (!db) {
@@ -113,6 +142,7 @@ export default function UsersPage() {
     };
   }, [db]);
 
+
   const handleBlockUser = async (userId: string) => {
     if (!confirm("정말 이 사용자를 차단하시겠습니까?")) return;
     
@@ -158,6 +188,67 @@ export default function UsersPage() {
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
           👨‍👩‍👧 유저/아이 관리
         </h1>
+
+        {/* 통계 표 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
+        >
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
+            📊 사용자 통계
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                {userStats.totalUsers}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                총 인원수
+              </div>
+            </div>
+            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+                {userStats.newUsersToday}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                신규 유입
+              </div>
+            </div>
+            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                {userStats.basicNewUsers}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                베이직 신규
+              </div>
+            </div>
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">
+                {userStats.basicTotalUsers}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                베이직 총인원
+              </div>
+            </div>
+            <div className="bg-pink-50 dark:bg-pink-900/20 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-pink-600 dark:text-pink-400 mb-1">
+                {userStats.premiumNewUsers}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                프리미엄 신규
+              </div>
+            </div>
+            <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                {userStats.premiumTotalUsers}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                프리미엄 총인원
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
         {/* 탭 */}
         <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
@@ -284,6 +375,78 @@ export default function UsersPage() {
                         </td>
                       </tr>
                     ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+
+        {/* 회원탈퇴 요청 */}
+        {selectedTab === "withdrawals" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
+          >
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      탈퇴일시
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      사용자 정보
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      탈퇴 사유
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      상세 사유
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {withdrawalRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        탈퇴 이력이 없습니다.
+                      </td>
+                    </tr>
+                  ) : (
+                    withdrawalRequests.map((request) => (
+                      <tr key={request.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                          {new Date(request.withdrawnAt).toLocaleString("ko-KR")}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="text-gray-900 dark:text-gray-100 font-medium">
+                            {request.childName || "이름 없음"}
+                          </div>
+                          <div className="text-gray-500 dark:text-gray-400 text-xs">
+                            {request.userEmail}
+                          </div>
+                          <div className="text-gray-400 dark:text-gray-500 text-xs">
+                            ID: {request.userId.substring(0, 8)}...
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="text-gray-900 dark:text-gray-100 font-medium">
+                            {request.reason}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          {request.detail ? (
+                            <div className="text-gray-600 dark:text-gray-400 max-w-md">
+                              {request.detail}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

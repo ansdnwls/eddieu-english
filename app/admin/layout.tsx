@@ -87,6 +87,7 @@ export default function AdminLayout({
             <AdminNavLink href="/admin/penpal/cancel-requests">❌ 취소 요청 관리</AdminNavLink>
             <AdminNavLink href="/admin/penpal/disputes">📮 편지 분쟁 처리</AdminNavLink>
             <AdminNavLink href="/admin/rewards">🎁 포인트 & 리워드</AdminNavLink>
+            <AdminNavLink href="/admin/pricing">💰 요금제 관리</AdminNavLink>
             <AdminNavLink href="/admin/ai">🤖 AI 피드백 모니터링</AdminNavLink>
             <AdminNavLink href="/admin/support">💌 고객 지원</AdminNavLink>
             <AdminNavLink href="/admin/settings">⚙️ 설정/도구</AdminNavLink>
