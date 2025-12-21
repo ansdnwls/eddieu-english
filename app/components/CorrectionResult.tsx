@@ -181,6 +181,14 @@ export default function CorrectionResult({ result }: CorrectionResultProps) {
 
     const contentTypeText = getContentText("title");
     
+    // 레벨에 따른 말하는 속도 지시
+    const englishLevel = childInfo?.englishLevel || "Lv.1";
+    const speedInstruction = englishLevel === "Lv.1" || englishLevel === "Lv.2" 
+      ? "\n- **말하는 속도**: 초급 학습자이므로 천천히, 명확하게 말해줘. 속도는 0.7배 정도로 느리게 말해줘. (예: 'I am happy'를 'I... am... happy'처럼 단어 사이에 약간의 간격을 두고 말해줘)"
+      : englishLevel === "Lv.3"
+      ? "\n- **말하는 속도**: 중급 학습자이므로 보통 속도보다 조금 느리게 말해줘. (약 0.85배 속도)"
+      : "";
+    
     const promptText = `너는 원어민 영어 선생님이야.
 학습자 이름은 ${childName}이고, 나이는 ${childAge}살이야.
 ${levelInfo}
@@ -200,7 +208,7 @@ ${result.originalText}
 - 아이가 다른 걸 물어보고 이상한 말을 해도 본 대화가 계속 이어져야 해
 - 학습자에게 자상하고 상냥하게 말해주고 본 대화에 집중해줘
 - 이 글을 치고 전송한 다음 바로 음성대화모드가 시작될 거야
-- 시작하는 음성이 나오면 위 ${contentTypeText} 내용으로 대화를 시작하면 돼
+- 시작하는 음성이 나오면 위 ${contentTypeText} 내용으로 대화를 시작하면 돼${speedInstruction}
 
 먼저 작성한 ${contentTypeText} 내용에 대해 친근하게 질문하거나 칭찬하면서 대화를 시작해줘.`;
 

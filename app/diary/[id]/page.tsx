@@ -272,6 +272,14 @@ export default function DiaryDetailPage() {
       levelInfo = `이 아이는 ${childInfo.englishLevel}이야. (${levelDescription})`;
     }
 
+    // 레벨에 따른 말하는 속도 지시
+    const englishLevel = childInfo.englishLevel;
+    const speedInstruction = englishLevel === "Lv.1" || englishLevel === "Lv.2" 
+      ? "\n- **말하는 속도**: 초급 학습자이므로 천천히, 명확하게 말해줘. 속도는 0.7배 정도로 느리게 말해줘. (예: \"I am happy\"를 \"I... am... happy\"처럼 단어 사이에 약간의 간격을 두고 말해줘)"
+      : englishLevel === "Lv.3"
+      ? "\n- **말하는 속도**: 중급 학습자이므로 보통 속도보다 조금 느리게 말해줘. (약 0.85배 속도)"
+      : "";
+
     const promptText = `너는 원어민 영어 선생님이야.
 아이 이름은 ${childName}이고, 나이는 ${childAge}살이야.
 ${levelInfo}
@@ -287,7 +295,7 @@ ${diary.originalText}
 
 이 상황을 바탕으로 아이의 수준에 맞춰 영어로 대화를 시작해줘.
 아이가 대화의 흐름을 바꾸더라도 
-아이에게 자상하고 상냥하게 말해주고 본 대화에 집중해줘.
+아이에게 자상하고 상냥하게 말해주고 본 대화에 집중해줘.${speedInstruction}
 
 먼저 아이가 쓴 일기 내용에 대해 친근하게 질문하거나 칭찬하면서 대화를 시작해줘.`;
 

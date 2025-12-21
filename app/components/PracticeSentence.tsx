@@ -44,9 +44,11 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
   const [phoneticText, setPhoneticText] = useState<string>("");
   const [recognizedText, setRecognizedText] = useState<string>("");
   const [wrongWords, setWrongWords] = useState<string[]>([]);
+  const [isPlayingRecording, setIsPlayingRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<any>(null);
+  const playbackAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // 녹음 및 음성 인식 지원 확인
   useEffect(() => {
@@ -377,8 +379,15 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
         audioRef.current.pause();
         audioRef.current = null;
       }
+      if (playbackAudioRef.current) {
+        playbackAudioRef.current.pause();
+        playbackAudioRef.current = null;
+      }
+      if (recordedAudio) {
+        URL.revokeObjectURL(recordedAudio);
+      }
     };
-  }, []);
+  }, [recordedAudio]);
 
   // ElevenLabs로 음성 재생
   const handleElevenLabsSpeak = async () => {
@@ -718,9 +727,31 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
       
       console.log("🎤 녹음 및 음성 인식 시작!");
       
-    } catch (error) {
-      console.error("마이크 접근 오류:", error);
-      alert("마이크 접근 권한이 필요합니다. 브라우저 설정에서 마이크 권한을 허용해주세요.");
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error("❌ 마이크 접근 오류:", err);
+      
+      let errorMessage = "마이크 접근 권한이 필요합니다.";
+      
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        errorMessage = `🎤 마이크 권한이 거부되었습니다.\n\n` +
+          `해결 방법:\n` +
+          `1. 브라우저 주소창 왼쪽의 자물쇠 아이콘(🔒) 클릭\n` +
+          `2. "마이크" 또는 "Microphone" 권한을 "허용"으로 변경\n` +
+          `3. 페이지를 새로고침(F5)한 후 다시 시도\n\n` +
+          `또는 브라우저 설정에서 이 사이트의 마이크 권한을 허용해주세요.`;
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        errorMessage = "마이크를 찾을 수 없습니다. 마이크가 연결되어 있는지 확인해주세요.";
+      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+        errorMessage = "마이크에 접근할 수 없습니다. 다른 프로그램에서 마이크를 사용 중인지 확인해주세요.";
+      } else if (err.name === "OverconstrainedError" || err.name === "ConstraintNotSatisfiedError") {
+        errorMessage = "마이크 설정에 문제가 있습니다. 브라우저를 재시작해보세요.";
+      } else {
+        errorMessage = `마이크 접근 오류: ${err.message || "알 수 없는 오류"}\n\n` +
+          `브라우저 설정에서 마이크 권한을 확인해주세요.`;
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -745,18 +776,90 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
 
   // 녹음 다시하기
   const handleRetry = () => {
+    // 재생 중인 오디오 정리
+    if (playbackAudioRef.current) {
+      playbackAudioRef.current.pause();
+      playbackAudioRef.current = null;
+    }
+    
+    // 기존 녹음 URL 정리
+    if (recordedAudio) {
+      URL.revokeObjectURL(recordedAudio);
+    }
+    
     setRecordedAudio(null);
     setPronunciationResult(null);
     setPronunciationScore(null);
     setRecognizedText("");
     setWrongWords([]);
+    setIsPlayingRecording(false);
   };
 
-  // 녹음 재생
-  const handlePlayRecording = () => {
-    if (recordedAudio) {
+  // 녹음 재생 (모바일 호환성 개선)
+  const handlePlayRecording = async () => {
+    if (!recordedAudio) {
+      console.warn("⚠️ 재생할 녹음이 없습니다.");
+      return;
+    }
+
+    try {
+      // 이전 오디오 정리
+      if (playbackAudioRef.current) {
+        playbackAudioRef.current.pause();
+        playbackAudioRef.current = null;
+      }
+
+      // 새 오디오 생성 및 재생
       const audio = new Audio(recordedAudio);
-      audio.play();
+      playbackAudioRef.current = audio;
+      
+      // 오디오 로드 완료 대기
+      await new Promise<void>((resolve, reject) => {
+        audio.onloadeddata = () => {
+          console.log("✅ 녹음 오디오 로드 완료");
+          resolve();
+        };
+        audio.onerror = (error) => {
+          console.error("❌ 오디오 로드 실패:", error);
+          reject(new Error("오디오를 로드할 수 없습니다."));
+        };
+        // 이미 로드된 경우를 대비
+        if (audio.readyState >= 2) {
+          resolve();
+        }
+      });
+
+      // 재생 시작
+      setIsPlayingRecording(true);
+      await audio.play();
+      console.log("▶️ 녹음 재생 시작");
+
+      // 재생 완료 처리
+      audio.onended = () => {
+        console.log("✅ 녹음 재생 완료");
+        setIsPlayingRecording(false);
+        playbackAudioRef.current = null;
+      };
+
+      // 재생 오류 처리
+      audio.onerror = (error) => {
+        console.error("❌ 녹음 재생 오류:", error);
+        setIsPlayingRecording(false);
+        playbackAudioRef.current = null;
+        alert("녹음을 재생할 수 없습니다. 다시 녹음해주세요.");
+      };
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error("❌ 녹음 재생 실패:", err);
+      setIsPlayingRecording(false);
+      playbackAudioRef.current = null;
+      
+      // 모바일 브라우저에서 사용자 인터랙션 없이 재생 불가능한 경우
+      if (err.message.includes("play") || err.name === "NotAllowedError") {
+        alert("녹음을 재생하려면 버튼을 다시 클릭해주세요.");
+      } else {
+        alert("녹음을 재생할 수 없습니다: " + err.message);
+      }
     }
   };
 
@@ -931,10 +1034,24 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
                 <div className="flex gap-2">
                   <button
                     onClick={handlePlayRecording}
-                    className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all flex items-center gap-2"
+                    disabled={isPlayingRecording}
+                    className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold min-h-[44px] ${
+                      isPlayingRecording
+                        ? "bg-gray-400 cursor-not-allowed text-white"
+                        : "bg-green-500 hover:bg-green-600 text-white"
+                    }`}
                   >
-                    <span>▶️</span>
-                    <span>내 목소리 듣기</span>
+                    {isPlayingRecording ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>재생 중...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>▶️</span>
+                        <span>내 목소리 듣기</span>
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={handleRetry}

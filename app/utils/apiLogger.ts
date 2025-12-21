@@ -46,10 +46,19 @@ export function maskSensitiveInfo(text: string | undefined | null): string {
 
 /**
  * API 호출 로그를 Firestore에 저장
+ * 서버 사이드에서는 Firestore 클라이언트 SDK가 제대로 작동하지 않을 수 있으므로
+ * 실패해도 조용히 처리합니다.
  */
 export async function logApiCall(data: ApiLogData): Promise<void> {
+  // 서버 사이드에서는 Firestore 클라이언트 SDK가 제한적으로 작동할 수 있음
+  if (typeof window === "undefined") {
+    // 서버 사이드에서는 로그 저장을 시도하지 않음 (조용히 무시)
+    // 필요시 Firebase Admin SDK를 사용해야 함
+    return;
+  }
+
   if (!db) {
-    console.warn("⚠️ Firestore not initialized, skipping API log");
+    // 클라이언트 사이드에서도 db가 없으면 무시
     return;
   }
 
@@ -70,7 +79,11 @@ export async function logApiCall(data: ApiLogData): Promise<void> {
       errorMessage: maskedErrorMessage,
     });
   } catch (error) {
-    console.error("❌ API 로그 저장 실패:", error);
+    // 로그 저장 실패는 조용히 무시 (API 응답에는 영향 없음)
+    // 개발 환경에서만 경고 메시지 출력
+    if (process.env.NODE_ENV === "development") {
+      console.warn("⚠️ API 로그 저장 실패 (무시됨):", error);
+    }
   }
 }
 

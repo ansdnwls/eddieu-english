@@ -1,40 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
 import { logVoiceApiCall } from "@/app/utils/apiLogger";
 
 // Buffer 사용을 위해 Node.js 런타임 지정
 export const runtime = "nodejs";
 
-// API 키 가져오기 (Firestore에서 가져오기)
-async function getAPIKeys() {
-  try {
-    if (!db) {
-      console.warn("⚠️ Firestore가 초기화되지 않았습니다.");
-      return {
-        elevenlabs: process.env.ELEVENLABS_API_KEY || "",
-      };
-    }
-
-    const docRef = doc(db, "admin_settings", "api_keys");
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      return {
-        elevenlabs: data.elevenlabs || process.env.ELEVENLABS_API_KEY || "",
-      };
-    }
-    
-    return {
-      elevenlabs: process.env.ELEVENLABS_API_KEY || "",
-    };
-  } catch (error) {
-    console.error("❌ API 키 로드 실패:", error);
-    return {
-      elevenlabs: process.env.ELEVENLABS_API_KEY || "",
-    };
+// API 키 가져오기 (환경 변수에서만 가져오기 - 서버 사이드)
+function getAPIKeys() {
+  const elevenlabsKey = process.env.ELEVENLABS_API_KEY || "";
+  
+  if (!elevenlabsKey) {
+    console.warn("⚠️ ELEVENLABS_API_KEY 환경 변수가 설정되지 않았습니다.");
   }
+  
+  return {
+    elevenlabs: elevenlabsKey,
+  };
 }
 
 // ElevenLabs 음성 ID 매핑 (차별화된 원어민 발음)
@@ -139,7 +119,7 @@ export async function POST(request: NextRequest) {
     const voiceId = VOICE_OPTIONS[voiceOption as VoiceOption] || VOICE_OPTIONS.default;
     
     // API 키 가져오기
-    const apiKeys = await getAPIKeys();
+    const apiKeys = getAPIKeys();
 
     if (!apiKeys.elevenlabs) {
       console.warn("⚠️ ElevenLabs API 키 없음 - Mock 응답 반환");
@@ -161,8 +141,10 @@ export async function POST(request: NextRequest) {
         apiKeys.elevenlabs
       );
 
-      // API 호출 로그 저장
-      await logVoiceApiCall(safeUserId, "success");
+      // API 호출 로그 저장 (비동기, 실패해도 API 응답에는 영향 없음)
+      logVoiceApiCall(safeUserId, "success").catch((logError) => {
+        console.warn("⚠️ 로그 저장 실패 (무시됨):", logError);
+      });
 
       // MP3 파일로 반환
       return new NextResponse(new Uint8Array(audioBuffer), {
@@ -176,8 +158,10 @@ export async function POST(request: NextRequest) {
       const err = voiceError as Error;
       console.error("❌ 음성 생성 API 오류:", err);
       
-      // API 호출 실패 로그 저장 (내부 로그용 - 상세 정보 포함)
-      await logVoiceApiCall(safeUserId, "error", err.message);
+      // API 호출 실패 로그 저장 (비동기, 실패해도 API 응답에는 영향 없음)
+      logVoiceApiCall(safeUserId, "error", err.message).catch((logError) => {
+        console.warn("⚠️ 로그 저장 실패 (무시됨):", logError);
+      });
       
       // 사용자에게는 안전한 메시지만 노출 (내부 에러 메시지 숨김)
       return NextResponse.json(
@@ -204,7 +188,7 @@ export async function POST(request: NextRequest) {
 // 사용 가능한 음성 목록 조회
 export async function GET(request: NextRequest) {
   try {
-    const apiKeys = await getAPIKeys();
+    const apiKeys = getAPIKeys();
 
     if (!apiKeys.elevenlabs) {
       return NextResponse.json({

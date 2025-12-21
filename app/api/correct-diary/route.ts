@@ -81,15 +81,19 @@ export async function POST(request: NextRequest) {
         isParent
       );
       
-      // API 호출 로그 저장
-      await logGptApiCall(safeUserId, "success");
+      // API 호출 로그 저장 (비동기, 실패해도 API 응답에는 영향 없음)
+      logGptApiCall(safeUserId, "success").catch((logError) => {
+        console.warn("⚠️ 로그 저장 실패 (무시됨):", logError);
+      });
     } catch (gptError: unknown) {
       const error = gptError as Error;
       const errorMessage = error.message || "알 수 없는 오류가 발생했습니다.";
       console.error("❌ GPT 오류:", maskSensitiveInfo(errorMessage));
       
-      // API 호출 실패 로그 저장 (내부 로그용 - 상세 정보 포함)
-      await logGptApiCall(safeUserId, "error", errorMessage);
+      // API 호출 실패 로그 저장 (비동기, 실패해도 API 응답에는 영향 없음)
+      logGptApiCall(safeUserId, "error", errorMessage).catch((logError) => {
+        console.warn("⚠️ 로그 저장 실패 (무시됨):", logError);
+      });
       
       // 사용자에게는 안전한 메시지만 노출 (내부 에러 메시지 숨김)
       let userFriendlyError = "AI 첨삭 처리 중 오류가 발생했습니다.";
