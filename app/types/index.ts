@@ -166,14 +166,17 @@ export interface Post {
   views: number;
   likes: string[]; // 좋아요한 사용자 UID 배열
   comments: Comment[];
-  isPinned?: boolean; // 공지사항 고정
+  isPinned?: boolean; // 현재 카테고리에 고정
+  isPinnedAll?: boolean; // 모든 게시판에 고정
   isDeleted?: boolean;
+  isRead?: boolean; // 관리자가 확인했는지 여부 (Q&A, 광고문의용)
+  isPrivate?: boolean; // 비밀글 여부 (광고문의용)
   createdAt: string;
   updatedAt: string;
   diaryId?: string; // 일기 공유 게시판의 경우 연결된 일기 ID
 }
 
-export type PostCategory = "diary_share" | "education_qa" | "notice_mission" | "penpal";
+export type PostCategory = "diary_share" | "education_qa" | "notice_mission" | "penpal" | "qna" | "advertisement";
 
 export interface PostCategoryInfo {
   value: PostCategory;
@@ -215,6 +218,22 @@ export const POST_CATEGORIES: PostCategoryInfo[] = [
     emoji: "📢",
     description: "운영팀이 이벤트, 미션 공지",
     writeAccess: "admin",
+    viewAccess: "all"
+  },
+  { 
+    value: "qna", 
+    label: "Q&A", 
+    emoji: "❓",
+    description: "서비스 관련 문의사항",
+    writeAccess: "all",
+    viewAccess: "all"
+  },
+  { 
+    value: "advertisement", 
+    label: "광고문의", 
+    emoji: "📢",
+    description: "광고 및 제휴 문의 (비밀글)",
+    writeAccess: "all",
     viewAccess: "all"
   },
 ];

@@ -6,18 +6,34 @@ import { motion } from "framer-motion";
 interface PracticeSentenceProps {
   sentence: string;
   original?: string;
+  englishLevel?: string; // 난이도별 속도 조정용
 }
 
 type AccentType = "US" | "UK";
 type TTSProvider = "browser" | "elevenlabs";
+type GenderType = "female" | "male";
 
-export default function PracticeSentence({ sentence, original }: PracticeSentenceProps) {
+export default function PracticeSentence({ sentence, original, englishLevel = "Lv.1" }: PracticeSentenceProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingVoice, setIsLoadingVoice] = useState(false);
   const [accent, setAccent] = useState<AccentType>("US");
   const [ttsProvider, setTtsProvider] = useState<TTSProvider>("elevenlabs"); // 기본값: ElevenLabs
+  const [gender, setGender] = useState<GenderType>("female"); // 기본값: 여성
+  const [speed, setSpeed] = useState<number>(0.8); // 기본 속도
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+  
+  // 난이도별 기본 속도 설정
+  useEffect(() => {
+    const levelSpeedMap: Record<string, number> = {
+      "Lv.1": 0.7,  // 매우 느림
+      "Lv.2": 0.75, // 느림
+      "Lv.3": 0.85, // 조금 느림
+      "Lv.4": 0.95, // 보통
+      "Lv.5": 1.0,  // 정상
+    };
+    setSpeed(levelSpeedMap[englishLevel] || 0.8);
+  }, [englishLevel]);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudio, setRecordedAudio] = useState<string | null>(null);
   const [pronunciationResult, setPronunciationResult] = useState<string | null>(null);
@@ -370,8 +386,13 @@ export default function PracticeSentence({ sentence, original }: PracticeSentenc
     setIsPlaying(true);
     
     try {
-      // 음성 옵션 결정 (accent 기반)
-      const voiceOption = accent === "US" ? "rachel_us" : "bella_uk";
+      // 음성 옵션 결정 (성별 및 악센트 기반)
+      let voiceOption: string;
+      if (gender === "female") {
+        voiceOption = accent === "US" ? "rachel_us" : "bella_uk";
+      } else {
+        voiceOption = accent === "US" ? "antoni_us" : "arnold_uk";
+      }
       
       console.log("🎤 ElevenLabs 음성 생성 시작...");
       
@@ -412,6 +433,9 @@ export default function PracticeSentence({ sentence, original }: PracticeSentenc
       // 오디오 재생
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
+      
+      // 속도 조정
+      audio.playbackRate = speed;
 
       audio.onended = () => {
         console.log("✅ ElevenLabs 음성 재생 완료");
@@ -473,9 +497,8 @@ export default function PracticeSentence({ sentence, original }: PracticeSentenc
       const utterance = new SpeechSynthesisUtterance(cleanedSentence);
       utterance.lang = accent === "US" ? "en-US" : "en-GB";
       
-      // 모바일을 위한 더 느린 속도 (부드러운 발음)
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      utterance.rate = isMobile ? 0.75 : 0.85; // 모바일에서 더 느리게
+      // 속도 조정 (난이도별)
+      utterance.rate = speed;
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
       
@@ -485,20 +508,28 @@ export default function PracticeSentence({ sentence, original }: PracticeSentenc
       
       let targetVoice = null;
       
-      if (accent === "US") {
-        // 미국 영어 음성 우선순위: Google > Microsoft > Apple > 기타
-        targetVoice = voices.find((v) => v.lang === "en-US" && (v.name.includes("Google") || v.name.includes("US English"))) ||
-                      voices.find((v) => v.lang === "en-US" && v.name.includes("Microsoft")) ||
-                      voices.find((v) => v.lang === "en-US" && (v.name.includes("Samantha") || v.name.includes("Alex"))) ||
-                      voices.find((v) => v.lang === "en-US" && !v.localService) ||
-                      voices.find((v) => v.lang.startsWith("en-US"));
+      // 성별 및 악센트 기반 음성 선택
+      const lang = accent === "US" ? "en-US" : "en-GB";
+      
+      if (gender === "female") {
+        // 여성 음성 우선순위
+        targetVoice = voices.find((v) => v.lang === lang && (v.name.includes("Google") || v.name.includes("Female") || v.name.includes("Samantha") || v.name.includes("Kate"))) ||
+                      voices.find((v) => v.lang === lang && v.name.includes("Microsoft") && !v.name.includes("Male")) ||
+                      voices.find((v) => v.lang === lang && !v.localService && !v.name.includes("Male")) ||
+                      voices.find((v) => v.lang.startsWith(lang) && !v.name.includes("Male"));
       } else {
-        // 영국 영어 음성
-        targetVoice = voices.find((v) => v.lang === "en-GB" && (v.name.includes("Google") || v.name.includes("UK English"))) ||
-                      voices.find((v) => v.lang === "en-GB" && v.name.includes("Microsoft")) ||
-                      voices.find((v) => v.lang === "en-GB" && (v.name.includes("Daniel") || v.name.includes("Kate"))) ||
-                      voices.find((v) => v.lang === "en-GB" && !v.localService) ||
-                      voices.find((v) => v.lang.startsWith("en-GB"));
+        // 남성 음성 우선순위
+        targetVoice = voices.find((v) => v.lang === lang && (v.name.includes("Google") || v.name.includes("Male") || v.name.includes("Alex") || v.name.includes("Daniel"))) ||
+                      voices.find((v) => v.lang === lang && v.name.includes("Microsoft") && v.name.includes("Male")) ||
+                      voices.find((v) => v.lang === lang && !v.localService && v.name.includes("Male")) ||
+                      voices.find((v) => v.lang.startsWith(lang) && v.name.includes("Male"));
+      }
+      
+      // 성별 필터링 실패 시 기본 선택
+      if (!targetVoice) {
+        targetVoice = voices.find((v) => v.lang === lang && (v.name.includes("Google") || v.name.includes("US English") || v.name.includes("UK English"))) ||
+                      voices.find((v) => v.lang === lang && !v.localService) ||
+                      voices.find((v) => v.lang.startsWith(lang));
       }
       
       if (targetVoice) {
@@ -745,6 +776,17 @@ export default function PracticeSentence({ sentence, original }: PracticeSentenc
             <option value="browser">🌐 브라우저 (기본)</option>
           </select>
           
+          {/* 성별 선택 */}
+          <select
+            value={gender}
+            onChange={(e) => setGender(e.target.value as GenderType)}
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+            disabled={isPlaying || isLoadingVoice}
+          >
+            <option value="female">👩 여성</option>
+            <option value="male">👨 남성</option>
+          </select>
+          
           {/* 악센트 선택 (브라우저 TTS일 때만) */}
           {ttsProvider === "browser" && (
             <select
@@ -757,6 +799,24 @@ export default function PracticeSentence({ sentence, original }: PracticeSentenc
               <option value="UK">🇬🇧 영국</option>
             </select>
           )}
+          
+          {/* 속도 조정 */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+            <label className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">속도:</label>
+            <input
+              type="range"
+              min="0.5"
+              max="1.2"
+              step="0.05"
+              value={speed}
+              onChange={(e) => setSpeed(parseFloat(e.target.value))}
+              className="w-20"
+              disabled={isPlaying || isLoadingVoice}
+            />
+            <span className="text-xs text-gray-700 dark:text-gray-300 w-10 text-right">
+              {speed.toFixed(2)}x
+            </span>
+          </div>
           
           {/* 들어보기 버튼 */}
           {!isPlaying && !isLoadingVoice ? (
@@ -788,34 +848,39 @@ export default function PracticeSentence({ sentence, original }: PracticeSentenc
         </div>
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-2 border-blue-200 dark:border-blue-700 space-y-3">
-        <p className="text-2xl font-semibold text-gray-800 dark:text-gray-200 leading-relaxed">
-          {sentence}
-        </p>
+      <div className="border-l-4 border-green-500 pl-4 py-2 space-y-2">
+        {/* 원본 문장 (빨간색 취소선) → 교정된 문장 (초록색) */}
+        <div className="flex flex-wrap gap-2 items-center mb-2">
+          {original && (
+            <>
+              <span className="text-red-600 dark:text-red-400 line-through text-base">
+                {original}
+              </span>
+              <span className="text-gray-400">→</span>
+            </>
+          )}
+          <span className="text-green-600 dark:text-green-400 font-semibold text-base">
+            {sentence}
+          </span>
+        </div>
         
         {/* 발음기호 - 강세 강조 */}
         {showPhonetics && phoneticText && (
-          <div className="space-y-3 bg-white dark:bg-gray-700/50 rounded-lg p-4">
+          <div className="space-y-2 bg-white dark:bg-gray-700/50 rounded-lg p-3 mt-2">
             <div>
               {renderPhonetics(phoneticText)}
             </div>
-            <div className="flex gap-4 text-sm border-t border-blue-200 dark:border-blue-700 pt-3">
-              <div className="flex items-center gap-2">
-                <span className="text-red-600 dark:text-red-400 font-bold text-lg">ˈ</span>
+            <div className="flex gap-4 text-xs border-t border-gray-200 dark:border-gray-600 pt-2">
+              <div className="flex items-center gap-1">
+                <span className="text-red-600 dark:text-red-400 font-bold">ˈ</span>
                 <span className="text-gray-600 dark:text-gray-400">강하게</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-orange-500 dark:text-orange-400 font-semibold text-lg">ˌ</span>
+              <div className="flex items-center gap-1">
+                <span className="text-orange-500 dark:text-orange-400 font-semibold">ˌ</span>
                 <span className="text-gray-600 dark:text-gray-400">조금 세게</span>
               </div>
             </div>
           </div>
-        )}
-        
-        {original && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 line-through">
-            원문: {original}
-          </p>
         )}
       </div>
 

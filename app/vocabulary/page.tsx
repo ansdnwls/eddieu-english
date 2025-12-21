@@ -118,7 +118,7 @@ export default function VocabularyPage() {
     loadVocabulary();
   }, [user, currentAccountType]); // currentAccountType 추가
 
-  const handleDownloadVocabularyPDF = () => {
+  const handleDownloadVocabularyPDF = async () => {
     if (words.length === 0) {
       alert("다운로드할 단어가 없습니다.");
       return;
@@ -134,8 +134,19 @@ export default function VocabularyPage() {
         category: w.category,
       }));
 
-      const pdf = generateVocabularyPDF(wordList, childName || "아이");
-      pdf.save(`영어단어_학습장_${new Date().toISOString().split("T")[0]}.pdf`);
+      // PDF 생성 (async)
+      const pdf = await generateVocabularyPDF(wordList, childName || "아이");
+      
+      // Blob URL을 사용하여 안전하게 다운로드 (Chrome 보안 경고 해결)
+      const pdfBlob = pdf.output("blob");
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `영어단어_학습장_${new Date().toISOString().split("T")[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error generating PDF:", error);
       alert("PDF 생성 중 오류가 발생했습니다.");

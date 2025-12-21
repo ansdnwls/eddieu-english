@@ -77,6 +77,8 @@ export default function AdminWritePostPage() {
         comments: [],
         isPinned: isPinned,
         isDeleted: false,
+        isRead: category === "qna" || category === "advertisement" ? false : undefined, // Q&A, 광고문의는 기본 false
+        isPrivate: category === "advertisement" ? true : false, // 광고문의는 비밀글
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

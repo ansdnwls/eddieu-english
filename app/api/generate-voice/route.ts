@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { logVoiceApiCall } from "@/app/utils/apiLogger";
+
+// Buffer 사용을 위해 Node.js 런타임 지정
+export const runtime = "nodejs";
 
 // API 키 가져오기 (Firestore에서 가져오기)
 async function getAPIKeys() {
@@ -81,7 +85,7 @@ async function generateVoiceWithElevenLabs(
         },
         body: JSON.stringify({
           text: text,
-          model_id: "eleven_monolingual_v1",
+          model_id: "eleven_turbo_v2_5", // 최신 모델 (무료 티어 지원)
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.75,
@@ -110,7 +114,10 @@ async function generateVoiceWithElevenLabs(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { text, voiceOption = "default" } = body;
+    const { text, voiceOption = "default", userId } = body;
+    
+    // userId가 optional이므로 안전하게 처리
+    const safeUserId = userId ?? "anonymous";
 
     // 입력 검증
     if (!text || typeof text !== "string" || text.trim().length === 0) {
@@ -147,20 +154,40 @@ export async function POST(request: NextRequest) {
     }
 
     // 음성 생성
-    const audioBuffer = await generateVoiceWithElevenLabs(
-      text,
-      voiceId,
-      apiKeys.elevenlabs
-    );
+    try {
+      const audioBuffer = await generateVoiceWithElevenLabs(
+        text,
+        voiceId,
+        apiKeys.elevenlabs
+      );
 
-    // MP3 파일로 반환
-    return new NextResponse(new Uint8Array(audioBuffer), {
-      status: 200,
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Content-Disposition": `attachment; filename="voice-${Date.now()}.mp3"`,
-      },
-    });
+      // API 호출 로그 저장
+      await logVoiceApiCall(safeUserId, "success");
+
+      // MP3 파일로 반환
+      return new NextResponse(new Uint8Array(audioBuffer), {
+        status: 200,
+        headers: {
+          "Content-Type": "audio/mpeg",
+          "Content-Disposition": `attachment; filename="voice-${Date.now()}.mp3"`,
+        },
+      });
+    } catch (voiceError: unknown) {
+      const err = voiceError as Error;
+      console.error("❌ 음성 생성 API 오류:", err);
+      
+      // API 호출 실패 로그 저장 (내부 로그용 - 상세 정보 포함)
+      await logVoiceApiCall(safeUserId, "error", err.message);
+      
+      // 사용자에게는 안전한 메시지만 노출 (내부 에러 메시지 숨김)
+      return NextResponse.json(
+        {
+          success: false,
+          error: "음성 생성 중 오류가 발생했습니다.",
+        },
+        { status: 500 }
+      );
+    }
   } catch (error: unknown) {
     const err = error as Error;
     console.error("❌ 음성 생성 API 오류:", err);

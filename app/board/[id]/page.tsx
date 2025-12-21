@@ -57,6 +57,24 @@ export default function PostDetailPage() {
             views: (postData.views || 0) + 1,
           });
         }
+
+        // 관리자가 Q&A나 광고문의 확인 시 isRead를 true로 업데이트
+        if (user?.uid && (postData.category === "qna" || postData.category === "advertisement")) {
+          try {
+            // 관리자 확인
+            const adminDoc = await getDoc(doc(db, "admins", user.uid));
+            if (adminDoc.exists() && adminDoc.data().isAdmin === true && !postData.isRead) {
+              await updateDoc(doc(db, "posts", postId), {
+                isRead: true,
+                updatedAt: new Date().toISOString(),
+              });
+              setPost({ ...postData, isRead: true });
+              console.log("✅ 게시글 읽음 처리 완료");
+            }
+          } catch (error) {
+            console.log("⚠️ 관리자 확인 실패:", error);
+          }
+        }
       } catch (error) {
         console.error("Error loading post:", error);
         alert("게시글을 불러오는 중 오류가 발생했습니다.");
@@ -216,11 +234,11 @@ export default function PostDetailPage() {
         </header>
 
         {/* 메인 콘텐츠 */}
-        <main className="max-w-4xl mx-auto px-4 py-8">
+        <main className="max-w-4xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 space-y-6"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-8 space-y-6"
           >
             {/* 게시글 헤더 */}
             <div>
@@ -232,15 +250,15 @@ export default function PostDetailPage() {
                   {POST_CATEGORIES.find(c => c.value === post.category)?.emoji} {POST_CATEGORIES.find(c => c.value === post.category)?.label}
                 </span>
               </div>
-              <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-4 break-words">
                 {post.title}
               </h1>
-              <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 <span>👤 {post.childName || post.authorNickname || post.authorName ? `${addSubjectParticle(post.childName || post.authorNickname || post.authorName)} 쓴 글` : "익명"}</span>
                 <span>👁️ {post.views || 0}</span>
                 <span>❤️ {post.likes?.length || 0}</span>
                 <span>💬 {post.comments?.length || 0}</span>
-                <span className="ml-auto">
+                <span className="w-full sm:w-auto sm:ml-auto">
                   {new Date(post.createdAt).toLocaleString("ko-KR")}
                 </span>
               </div>

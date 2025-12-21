@@ -120,6 +120,8 @@ function WritePostContent() {
         comments: [],
         isPinned: false,
         isDeleted: false,
+        isRead: category === "qna" || category === "advertisement" ? false : undefined, // Q&A, 광고문의는 미확인 상태로 시작
+        isPrivate: category === "advertisement" ? true : false, // 광고문의는 비밀글
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

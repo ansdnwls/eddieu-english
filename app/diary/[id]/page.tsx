@@ -22,6 +22,15 @@ export default function DiaryDetailPage() {
   const [todayWords, setTodayWords] = useState<ExtractedWord[] | null>(null);
   const [isGeneratingWords, setIsGeneratingWords] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+
+  // todayWords 변경 감지 (디버깅용)
+  useEffect(() => {
+    console.log("📚 todayWords 상태 변경:", todayWords);
+    if (todayWords) {
+      console.log(`📚 todayWords 길이: ${todayWords.length}`);
+      console.log("📚 todayWords 내용:", todayWords);
+    }
+  }, [todayWords]);
   const [childInfo, setChildInfo] = useState<{
     childName: string;
     age: number;
@@ -188,7 +197,9 @@ export default function DiaryDetailPage() {
       }
 
       console.log(`✅ ${enhancedWords.length}개의 단어 생성 완료`);
+      console.log("생성된 단어 목록:", enhancedWords);
       setTodayWords(enhancedWords);
+      console.log("todayWords 상태 업데이트 완료");
       
       alert(`✨ AI가 ${enhancedWords.length}개의 학습 단어를 생성했습니다!\n\n유의어, 반의어, 학습 팁이 포함되어 있어요.`);
     } catch (error) {
@@ -199,7 +210,7 @@ export default function DiaryDetailPage() {
     }
   };
 
-  const handlePrintTodayWords = () => {
+  const handlePrintTodayWords = async () => {
     console.log("handlePrintTodayWords 호출됨");
     console.log("todayWords:", todayWords);
     
@@ -212,8 +223,21 @@ export default function DiaryDetailPage() {
     try {
       const childName = user?.displayName || "우리 아이";
       console.log(`PDF 생성 시작: ${todayWords.length}개 단어`);
-      const doc = generateVocabularyPDF(todayWords, childName);
-      doc.save(`오늘의_단어_${childName}.pdf`);
+      
+      // PDF 생성 (async)
+      const doc = await generateVocabularyPDF(todayWords, childName);
+      
+      // Blob URL을 사용하여 안전하게 다운로드 (Chrome 보안 경고 해결)
+      const pdfBlob = doc.output("blob");
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `오늘의_단어_${childName}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
       console.log("PDF 저장 완료");
       alert(`✅ 단어장이 다운로드되었습니다! (${todayWords.length}개 단어)`);
     } catch (error) {
@@ -758,7 +782,7 @@ ${diary.originalText}
                       이 일기에는 추출된 단어가 없어요. 새로 첨삭한 일기에서 단어장을 만들어보세요.
                     </p>
                   </div>
-                ) : !todayWords ? (
+                ) : !todayWords || todayWords.length === 0 ? (
                   <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center border border-blue-200 dark:border-blue-700">
                     <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
                       🤖 <strong>AI 단어장 만들기</strong>를 눌러보세요!
@@ -769,7 +793,7 @@ ${diary.originalText}
                   </div>
                 ) : null}
 
-                {todayWords && todayWords.length > 0 && (
+                {todayWords && Array.isArray(todayWords) && todayWords.length > 0 && (
                   <>
                     <div className="mt-3 mb-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
                       <p className="text-sm text-purple-700 dark:text-purple-300 text-center">
@@ -777,7 +801,9 @@ ${diary.originalText}
                       </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                      {todayWords.map((word, index) => (
+                      {todayWords.map((word, index) => {
+                        console.log(`렌더링 단어 ${index}:`, word);
+                        return (
                         <div
                           key={`${word.word}-${index}`}
                           className="border-2 border-blue-200 dark:border-blue-700 rounded-xl p-4 bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-800/60 hover:shadow-lg transition-all hover:scale-[1.02]"
@@ -835,18 +861,12 @@ ${diary.originalText}
                             </div>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </>
                 )}
 
-                {todayWords && todayWords.length === 0 && (
-                  <div className="mt-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 text-center border border-yellow-200 dark:border-yellow-700">
-                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                      이 일기에서 추천할 단어를 찾지 못했어요. 다음 일기에서 다시 시도해볼까요?
-                    </p>
-                  </div>
-                )}
               </motion.div>
 
             {/* 뒤로 가기 버튼 */}

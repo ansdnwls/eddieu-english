@@ -6,16 +6,23 @@ import { CorrectionResult as CorrectionResultType, EnglishLevel } from "../types
 import PracticeSentence from "./PracticeSentence";
 import VoicePlayer from "./VoicePlayer";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 
 interface CorrectionResultProps {
   result: CorrectionResultType;
 }
 
 export default function CorrectionResult({ result }: CorrectionResultProps) {
+  const { user } = useAuth();
   const [currentAccountType, setCurrentAccountType] = useState<"child" | "parent">("child");
   const [isCopied, setIsCopied] = useState(false);
   const [childInfo, setChildInfo] = useState<any>(null);
   const [contentType, setContentType] = useState<"diary" | "composition" | "letter">("diary");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     const accountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
@@ -44,6 +51,90 @@ export default function CorrectionResult({ result }: CorrectionResultProps) {
     }
   }, [result.diaryId]);
 
+  // 단어 수 카운팅 함수
+  const countWords = (text: string): number => {
+    if (!text || !text.trim()) return 0;
+    return text
+      .replace(/[.,!?;:()\[\]{}'"]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.trim().length > 0).length;
+  };
+
+  // 문장 수 카운팅 함수
+  const countSentences = (text: string): number => {
+    if (!text || !text.trim()) return 0;
+    return text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+  };
+
+  // 고유 단어 수 카운팅 함수
+  const countUniqueWords = (text: string): number => {
+    if (!text || !text.trim()) return 0;
+    const words = text
+      .toLowerCase()
+      .replace(/[.,!?;:()\[\]{}'"]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.trim().length > 0);
+    return new Set(words).size;
+  };
+
+  // 저장 기능
+  const handleSave = async () => {
+    if (!user || !db) {
+      setSaveError("로그인이 필요합니다.");
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const originalText = result.originalText;
+      const wordCount = countWords(originalText);
+      const sentenceCount = countSentences(originalText);
+      const uniqueWordsCount = countUniqueWords(originalText);
+
+      const diaryEntry = {
+        userId: user.uid,
+        originalText: originalText,
+        correctedText: result.correctedText,
+        feedback: result.feedback,
+        encouragement: result.cheerUp || result.encouragement || "잘하고 있어요! 계속 연습해봐요! 💪",
+        corrections: result.corrections || [],
+        extractedWords: result.extractedWords || [],
+        sentenceByStence: result.sentenceByStence || [],
+        sentenceExpansion: result.sentenceExpansion || "",
+        expansionExample: result.expansionExample || "",
+        englishLevel: childInfo?.englishLevel || "Lv.1",
+        accountType: currentAccountType,
+        contentType: contentType,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        stats: {
+          wordCount: wordCount,
+          sentenceCount: sentenceCount,
+          averageSentenceLength: sentenceCount > 0 ? Math.round(wordCount / sentenceCount) : 0,
+          correctionCount: result.corrections?.length || 0,
+          uniqueWords: uniqueWordsCount,
+        }
+      };
+
+      await addDoc(collection(db, "diaries"), diaryEntry);
+      console.log("✅ 교정 결과가 저장되었습니다!");
+      setIsSaved(true);
+      
+      // 3초 후 저장 완료 메시지 숨기기
+      setTimeout(() => {
+        setIsSaved(false);
+      }, 3000);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error("❌ 저장 중 오류:", err);
+      setSaveError(err.message || "저장 중 오류가 발생했습니다.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // 콘텐츠 타입별 텍스트
   const getContentText = (key: string) => {
     const texts: Record<string, Record<string, string>> = {
@@ -68,13 +159,8 @@ export default function CorrectionResult({ result }: CorrectionResultProps) {
 
   // GPT 대화 프롬프트 복사
   const handleCopyGPTPrompt = () => {
-    if (!childInfo) {
-      alert("아이 정보를 불러올 수 없습니다.");
-      return;
-    }
-
-    const childName = childInfo.childName || "학생";
-    const childAge = childInfo.age || 8;
+    const childName = childInfo?.childName || "학생";
+    const childAge = childInfo?.age || 8;
     
     const levelDescriptionMap: Record<EnglishLevel, string> = {
       "Lv.1": "영어 작문 처음 시작 (단어 몇 개로 쓰기 시작)",
@@ -108,9 +194,13 @@ ${result.originalText}
 교정본: ${result.correctedText}
 피드백: ${result.feedback}
 
-이 상황을 바탕으로 학습자의 수준에 맞춰 영어로 대화를 시작해줘.
-학습자가 대화의 흐름을 바꾸더라도 
-학습자에게 자상하고 상냥하게 말해주고 본 대화에 집중해줘.
+[중요한 지침]
+위 ${contentTypeText} 내용을 바탕으로 아이와 영어로 대화를 할 거야.
+- 먼저 질문해서 대화를 이끌어줘
+- 아이가 다른 걸 물어보고 이상한 말을 해도 본 대화가 계속 이어져야 해
+- 학습자에게 자상하고 상냥하게 말해주고 본 대화에 집중해줘
+- 이 글을 치고 전송한 다음 바로 음성대화모드가 시작될 거야
+- 시작하는 음성이 나오면 위 ${contentTypeText} 내용으로 대화를 시작하면 돼
 
 먼저 작성한 ${contentTypeText} 내용에 대해 친근하게 질문하거나 칭찬하면서 대화를 시작해줘.`;
 
@@ -275,6 +365,7 @@ ${result.originalText}
                     <PracticeSentence
                       sentence={sentence.corrected}
                       original={sentence.original}
+                      englishLevel={childInfo?.englishLevel || "Lv.1"}
                     />
                   </div>
                 ))}
@@ -295,9 +386,11 @@ ${result.originalText}
                 교정된 {getContentText("title")} (전체)
               </h3>
             </div>
-            <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed font-medium mb-6">
-              {result.correctedText}
-            </p>
+            <div className="bg-white dark:bg-gray-700 rounded-lg p-4 mb-6 border border-gray-200 dark:border-gray-600">
+              <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed font-medium text-sm sm:text-base">
+                {result.correctedText}
+              </p>
+            </div>
 
             {/* 전체 일기 듣고 말하기 */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 mt-4">
@@ -313,6 +406,7 @@ ${result.originalText}
               <PracticeSentence
                 sentence={result.correctedText}
                 original={result.originalText}
+                englishLevel={childInfo?.englishLevel || "Lv.1"}
               />
             </div>
           </motion.div>
@@ -334,13 +428,11 @@ ${result.originalText}
               </p>
               <button
                 onClick={handleCopyGPTPrompt}
-                disabled={!childInfo}
+                disabled={isCopied}
                 className={`w-full px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${
                   isCopied
                     ? "bg-green-500 text-white"
-                    : !childInfo
-                    ? "bg-gray-400 cursor-not-allowed text-white"
-                    : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md"
+                    : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md hover:shadow-lg"
                 }`}
               >
                 {isCopied ? (
@@ -392,54 +484,11 @@ ${result.originalText}
             </div>
           </motion.div>
 
-          {/* 7. 통계 (선택적) */}
-          {result.stats && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.7 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg"
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-2xl">📊</span>
-                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                  통계
-                </h3>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {result.stats.wordCount}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">단어 수</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {result.stats.sentenceCount}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">문장 수</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {result.stats.uniqueWords}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">고유 단어</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                    {result.stats.correctionCount}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">교정 수</div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* 8. 오늘의 단어 (AI 단어장) */}
+          {/* 7. 오늘의 단어 (AI 단어장) */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.8 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
             className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg"
           >
             <div className="flex items-center justify-between mb-4">
@@ -524,11 +573,11 @@ ${result.originalText}
             )}
           </motion.div>
 
-          {/* 9. 응원 메시지 */}
+          {/* 8. 응원 메시지 */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.9 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
             className="bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 rounded-2xl p-6 text-center"
           >
             <div className="text-4xl mb-3">🎉</div>
@@ -537,11 +586,48 @@ ${result.originalText}
             </p>
           </motion.div>
 
-          {/* 대시보드로 돌아가기 */}
-          <div className="flex justify-center">
+          {/* 저장 버튼 및 대시보드로 돌아가기 */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+            <button
+              onClick={handleSave}
+              disabled={isSaving || isSaved || !user}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                isSaved
+                  ? "bg-green-500 text-white"
+                  : isSaving
+                  ? "bg-gray-400 cursor-not-allowed text-white"
+                  : !user
+                  ? "bg-gray-400 cursor-not-allowed text-white"
+                  : "bg-blue-500 hover:bg-blue-600 text-white shadow-md hover:shadow-lg"
+              }`}
+            >
+              {isSaving ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>저장 중...</span>
+                </>
+              ) : isSaved ? (
+                <>
+                  <span>✅</span>
+                  <span>저장 완료!</span>
+                </>
+              ) : (
+                <>
+                  <span>💾</span>
+                  <span>저장하기</span>
+                </>
+              )}
+            </button>
+            
+            {saveError && (
+              <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 px-4 py-2 rounded-lg text-sm">
+                {saveError}
+              </div>
+            )}
+            
             <Link
               href="/dashboard"
-              className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold py-3 px-8 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+              className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold py-3 px-6 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
             >
               ← 대시보드로 돌아가기
             </Link>

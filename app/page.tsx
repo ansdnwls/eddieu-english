@@ -9,13 +9,16 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import CorrectionResult from "./components/CorrectionResult";
 import { CorrectionResult as CorrectionResultType } from "./types";
 import Link from "next/link";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, doc, getDoc, query, orderBy, limit, getDocs, onSnapshot } from "firebase/firestore";
 import { EnglishLevel } from "./types";
+import { useFeaturedDiary } from "@/hooks/useFeaturedDiary";
+import { saveDiary } from "@/lib/diary/saveDiary";
 
 function HomeContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [englishLevel, setEnglishLevel] = useState<EnglishLevel | "">("");
   const [childInfo, setChildInfo] = useState<{
@@ -42,12 +45,8 @@ function HomeContent() {
   // 직접 타이핑 상태
   const [directText, setDirectText] = useState<string>("");
 
-  // 오늘의 일기 배지 수상자
-  const [featuredUser, setFeaturedUser] = useState<{
-    childName: string;
-    diaryId: string;
-    featuredAt: string;
-  } | null>(null);
+  // 오늘의 일기 배지 수상자 (커스텀 훅 사용)
+  const { featuredUser } = useFeaturedDiary();
 
   const handleSignOut = async () => {
     try {
@@ -105,77 +104,6 @@ function HomeContent() {
     }
   }, [user]);
 
-  // 오늘의 일기 배지 수상자 로드 (실시간 업데이트)
-  useEffect(() => {
-    if (!db) return;
-
-    const firestoreDb = db as NonNullable<typeof db>;
-
-    // 실시간 리스너 설정
-    const q = query(
-      collection(firestoreDb, "diaries"),
-      orderBy("featuredAt", "desc"),
-      limit(1)
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      async (snapshot) => {
-        try {
-          if (!snapshot.empty) {
-            const diaryDoc = snapshot.docs[0];
-            const diaryData = diaryDoc.data();
-
-            if (diaryData.featured && diaryData.featuredAt) {
-              // 오늘 날짜 확인 (featuredAt이 오늘인지)
-              const featuredDate = new Date(diaryData.featuredAt);
-              const today = new Date();
-              const isToday =
-                featuredDate.getDate() === today.getDate() &&
-                featuredDate.getMonth() === today.getMonth() &&
-                featuredDate.getFullYear() === today.getFullYear();
-
-              if (isToday) {
-                // 해당 사용자의 아이 이름 가져오기
-                const childRef = doc(firestoreDb, "children", diaryData.userId);
-                const childSnap = await getDoc(childRef);
-                let childName = "어린이";
-                
-                if (childSnap.exists()) {
-                  const childData = childSnap.data();
-                  childName = childData.childName || childData.name || "어린이";
-                }
-
-                setFeaturedUser({
-                  childName: childName,
-                  diaryId: diaryDoc.id,
-                  featuredAt: diaryData.featuredAt,
-                });
-              } else {
-                // 오늘이 아니면 표시하지 않음
-                setFeaturedUser(null);
-              }
-            } else {
-              // featured가 false이거나 featuredAt이 없으면 표시하지 않음
-              setFeaturedUser(null);
-            }
-          } else {
-            // 일기가 없으면 표시하지 않음
-            setFeaturedUser(null);
-          }
-        } catch (err) {
-          console.error("Error loading featured diary:", err);
-          setFeaturedUser(null);
-        }
-      },
-      (error) => {
-        console.error("Error in featured diary snapshot:", error);
-        setFeaturedUser(null);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
 
   // 로딩 중이면 로딩 화면 표시
   if (authLoading) {
@@ -236,34 +164,6 @@ function HomeContent() {
   };
 
   // 직접 타이핑 모드에서 AI 첨삭 시작
-  // 정확한 단어 카운팅 함수
-  const countWords = (text: string): number => {
-    if (!text || !text.trim()) return 0;
-    
-    // 구두점 제거 후 공백으로 분리, 빈 문자열 필터링
-    return text
-      .replace(/[.,!?;:()\[\]{}'"]/g, ' ') // 구두점을 공백으로 변환
-      .split(/\s+/) // 공백으로 분리
-      .filter(word => word.length > 0) // 빈 문자열 제거
-      .length;
-  };
-
-  // 문장 수 카운팅 함수
-  const countSentences = (text: string): number => {
-    if (!text || !text.trim()) return 0;
-    return text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
-  };
-
-  // 고유 단어 수 카운팅 함수
-  const countUniqueWords = (text: string): number => {
-    if (!text || !text.trim()) return 0;
-    const words = text
-      .toLowerCase()
-      .replace(/[.,!?;:()\[\]{}'"]/g, ' ')
-      .split(/\s+/)
-      .filter(word => word.length > 0);
-    return new Set(words).size;
-  };
 
   const handleDirectSubmit = async () => {
     if (!directText.trim()) {
@@ -304,38 +204,18 @@ function HomeContent() {
         const correctionData = data.data;
         setResult(correctionData);
 
-        // Firestore에 저장
-        if (db) {
-          try {
-            const wordCount = countWords(directText);
-            const sentenceCount = countSentences(directText);
-            const uniqueWordsCount = countUniqueWords(directText);
-            
-            await addDoc(collection(db, "diaries"), {
-              userId: user.uid,
-              originalText: directText,
-              correctedText: correctionData.correctedText,
-              feedback: correctionData.feedback,
-              encouragement: correctionData.encouragement,
-              corrections: correctionData.corrections || [],
-              extractedWords: correctionData.extractedWords || [],
-              englishLevel: englishLevel || childInfo?.englishLevel || "Lv.1",
-              accountType: currentAccountType, // 현재 모드에 따라 저장 (아이/부모)
-              contentType: "diary" as const, // 일기로 표시
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              stats: {
-                wordCount: wordCount,
-                sentenceCount: sentenceCount,
-                averageSentenceLength: sentenceCount > 0 ? Math.round(wordCount / sentenceCount) : 0,
-                correctionCount: correctionData.corrections?.length || 0,
-                uniqueWords: uniqueWordsCount,
-              }
-            });
-            console.log("✅ Firestore 저장 완료");
-          } catch (firestoreError) {
-            console.error("❌ Firestore 저장 실패:", firestoreError);
-          }
+        // Firestore에 저장 (lib 함수 사용)
+        try {
+          await saveDiary({
+            userId: user.uid,
+            originalText: directText,
+            correctionData,
+            englishLevel: (englishLevel || childInfo?.englishLevel || "Lv.1") as EnglishLevel,
+            accountType: currentAccountType,
+          });
+        } catch (saveError) {
+          console.error("❌ 일기 저장 실패:", saveError);
+          // 저장 실패해도 UI는 계속 표시 (사용자 경험 우선)
         }
       } else {
         setError(data.error || "첨삭 중 오류가 발생했습니다.");
@@ -388,40 +268,19 @@ function HomeContent() {
         const correctionData = data.data;
         setResult(correctionData);
         
-        // Firestore에 일기 저장
-        if (user && db) {
+        // Firestore에 일기 저장 (lib 함수 사용)
+        if (user) {
           try {
-            const originalText = correctionData.originalText;
-            const wordCount = countWords(originalText);
-            const sentenceCount = countSentences(originalText);
-            const uniqueWordsCount = countUniqueWords(originalText);
-            
-            const diaryEntry = {
+            await saveDiary({
               userId: user.uid,
-              originalText: originalText,
-              correctedText: correctionData.correctedText,
-              feedback: correctionData.feedback,
-              encouragement: correctionData.encouragement,
-              corrections: correctionData.corrections || [],
-              extractedWords: correctionData.extractedWords || [],
-              englishLevel: englishLevel || childInfo?.englishLevel || "Lv.1",
-              accountType: currentAccountType, // 현재 모드에 따라 저장 (아이/부모)
-              contentType: "diary" as const, // 일기로 표시
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              stats: {
-                wordCount: wordCount,
-                sentenceCount: sentenceCount,
-                averageSentenceLength: sentenceCount > 0 ? Math.round(wordCount / sentenceCount) : 0,
-                correctionCount: correctionData.corrections?.length || 0,
-                uniqueWords: uniqueWordsCount,
-              }
-            };
-            
-            await addDoc(collection(db, "diaries"), diaryEntry);
-            console.log("✅ 일기가 저장되었습니다!");
+              originalText: correctionData.originalText,
+              correctionData,
+              englishLevel: (englishLevel || childInfo?.englishLevel || "Lv.1") as EnglishLevel,
+              accountType: currentAccountType,
+            });
           } catch (saveError) {
-            console.error("일기 저장 중 오류:", saveError);
+            console.error("❌ 일기 저장 실패:", saveError);
+            // 저장 실패해도 UI는 계속 표시 (사용자 경험 우선)
           }
         }
         

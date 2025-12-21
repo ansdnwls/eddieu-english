@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { RecurringPaymentRequest, RecurringPaymentResponse } from "@/app/types";
 
+// Buffer 사용을 위해 Node.js 런타임 지정
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -76,5 +79,8 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+
+
 
 

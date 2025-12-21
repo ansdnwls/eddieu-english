@@ -228,9 +228,8 @@ export default function AdminPenpalPage() {
         return;
       }
 
-      const firestoreDb = db as NonNullable<typeof db>;
       const deletePromises = Array.from(selectedMatches).map((matchId) =>
-        deleteDoc(doc(firestoreDb, "penpalMatches", matchId))
+        deleteDoc(doc(db, "penpalMatches", matchId))
       );
 
       await Promise.all(deletePromises);

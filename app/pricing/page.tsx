@@ -35,17 +35,19 @@ export default function PricingPage() {
     const firestoreDb = db as NonNullable<typeof db>;
 
     // 실시간 리스너 설정
+    // Note: 필터링만 하고 클라이언트에서 정렬 (인덱스 불필요)
     const unsubscribe = onSnapshot(
       query(
         collection(firestoreDb, "pricingPlans"),
-        where("isActive", "==", true),
-        orderBy("price", "asc")
+        where("isActive", "==", true)
       ),
       (snapshot) => {
-        const plansList = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as PricingPlan[];
+        const plansList = (snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as PricingPlan[])
+          .sort((a, b) => a.price - b.price); // 클라이언트에서 가격순 정렬
 
         // 무료 플랜이 없으면 기본 무료 플랜 추가
         if (plansList.length === 0 || plansList[0].price > 0) {

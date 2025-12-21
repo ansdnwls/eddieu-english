@@ -3,6 +3,9 @@ import { PaymentConfirmRequest, PaymentInfo, Subscription } from "@/app/types";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 
+// Buffer 사용을 위해 Node.js 런타임 지정
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
 import { DiaryEntry, MonthlyReport } from "@/app/types";
+import { maskSensitiveInfo } from "@/app/utils/apiLogger";
 
-async function getAPIKeys() {
-  try {
-    if (!db) {
-      return { openai: process.env.OPENAI_API_KEY || "" };
-    }
-    const docRef = doc(db, "admin_settings", "api_keys");
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      return { openai: data.openai || process.env.OPENAI_API_KEY || "" };
-    }
-    return { openai: process.env.OPENAI_API_KEY || "" };
-  } catch (error) {
-    return { openai: process.env.OPENAI_API_KEY || "" };
+// API 키 가져오기 (환경변수만 사용)
+function getAPIKeys() {
+  return {
+    openai: process.env.OPENAI_API_KEY || "",
+  };
+}
+
+// API 키 검증 및 에러 반환
+function validateAPIKey(key: string | undefined, keyName: string): string {
+  if (!key || key.trim().length === 0) {
+    throw new Error(`${keyName}가 설정되지 않았습니다. Vercel 환경변수에서 ${keyName}를 설정해주세요.`);
   }
+  return key;
 }
 
 async function generateReportWithGPT(
@@ -276,17 +273,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKeys = await getAPIKeys();
-
-    if (!apiKeys.openai) {
-      console.warn("⚠️ OpenAI API 키가 없습니다. Mock 데이터 사용");
+    // API 키 가져오기 및 검증
+    const apiKeys = getAPIKeys();
+    let openaiKey: string;
+    try {
+      openaiKey = validateAPIKey(apiKeys.openai, "OPENAI_API_KEY");
+    } catch (keyError: unknown) {
+      const error = keyError as Error;
+      console.error("❌ API 키 검증 실패:", maskSensitiveInfo(error.message));
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        { status: 500 }
+      );
     }
 
-    const report = await generateReportWithGPT(
-      diaries,
-      accountType,
-      apiKeys.openai
-    );
+    let report: MonthlyReport;
+    try {
+      report = await generateReportWithGPT(
+        diaries,
+        accountType,
+        openaiKey
+      );
+    } catch (gptError: unknown) {
+      const error = gptError as Error;
+      const errorMessage = error.message || "알 수 없는 오류가 발생했습니다.";
+      console.error("❌ GPT 오류:", maskSensitiveInfo(errorMessage));
+      
+      // API 키 관련 오류인 경우 한국어 메시지로 변환
+      let userFriendlyError = "월별 리포트 생성 중 오류가 발생했습니다.";
+      if (error.message?.includes("API key") || error.message?.includes("401") || error.message?.includes("invalid")) {
+        userFriendlyError = "OpenAI API 키가 유효하지 않습니다. 관리자에게 문의해주세요.";
+      } else if (error.message?.includes("rate limit") || error.message?.includes("429")) {
+        userFriendlyError = "API 호출 한도가 초과되었습니다. 잠시 후 다시 시도해주세요.";
+      }
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: userFriendlyError,
+        },
+        { status: 500 }
+      );
+    }
 
     console.log("✅ 월별 리포트 생성 완료");
 

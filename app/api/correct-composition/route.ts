@@ -1,36 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { maskSensitiveInfo } from "@/app/utils/apiLogger";
 
-// API 키 가져오기 (Firestore에서 가져오기)
-async function getAPIKeys() {
-  try {
-    if (!db) {
-      console.warn("Firestore가 초기화되지 않았습니다.");
-      return {
-        openai: process.env.OPENAI_API_KEY || "",
-      };
-    }
+// API 키 가져오기 (환경변수만 사용)
+function getAPIKeys() {
+  return {
+    openai: process.env.OPENAI_API_KEY || "",
+  };
+}
 
-    const docRef = doc(db, "admin_settings", "api_keys");
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      return {
-        openai: data.openai || process.env.OPENAI_API_KEY || "",
-      };
-    }
-    
-    return {
-      openai: process.env.OPENAI_API_KEY || "",
-    };
-  } catch (error) {
-    console.error("API 키 로드 실패:", error);
-    return {
-      openai: process.env.OPENAI_API_KEY || "",
-    };
+// API 키 검증 및 에러 반환
+function validateAPIKey(key: string | undefined, keyName: string): string {
+  if (!key || key.trim().length === 0) {
+    throw new Error(`${keyName}가 설정되지 않았습니다. Vercel 환경변수에서 ${keyName}를 설정해주세요.`);
   }
+  return key;
 }
 
 // OpenAI API로 영어작문 첨삭 처리
@@ -131,6 +114,12 @@ ${originalText}
 - 영어 레벨: ${englishLevel}
 - 작문 유형: ${typeDescription[compositionType]}
 
+[중요: 구두점, 관사, 전치사 교정]
+- ⚠️ 학습자는 쉼표(,), 마침표(.)를 빼먹을 수 있습니다
+- 문장 끝에 마침표가 없어도 문장으로 인식하고 교정하세요
+- 관사(a, an, the)와 전치사(in, on, at, with, to 등)도 자주 빼먹는 부분입니다
+- 구두점, 관사, 전치사 누락 시 반드시 교정하고 자상하게 설명하세요
+
 [중요: 다양한 표현 학습]
 학습자가 같은 의미를 여러 가지 방식으로 표현할 수 있도록 안내해주세요:
 - 각 문장마다 2-3가지 대체 표현 제시
@@ -147,10 +136,13 @@ ${originalText}
    - 글의 전반적인 평가
    - 다양한 표현 방법의 중요성 강조
 
-3. corrections: 중요한 교정 3-5개 (레벨에 맞게)
+3. corrections: 중요한 교정 3-5개 (레벨에 맞게, 구두점/관사/전치사 포함)
    - 각 교정마다 2-3가지 대체 표현 제시
    - 왜 이렇게 고쳤는지 설명
    - 다른 방식으로도 표현할 수 있음을 안내
+   - 구두점 누락 시: "문장 끝에는 마침표를 붙여야 합니다."
+   - 관사 누락 시: "명사 앞에 'a', 'an', 'the'를 붙이면 더 자연스럽습니다."
+   - 전치사 누락 시: "장소를 말할 때는 'to', 'in', 'on' 등을 사용합니다."
 
 4. sentenceExpansion: 작문을 더 풍부하게 만들 수 있는 질문/제안
    - 예: "이 경험을 더 생생하게 표현하려면 어떻게 할 수 있을까요?"
@@ -181,9 +173,14 @@ ${originalText}
        - "fantastic" (비격식), 예문: "That's fantastic news!"
 
 9. sentenceByStence: 문장별 교정 (배열)
-   - original: 원본 문장
+   - ⚠️ 학습자가 구두점(쉼표, 마침표)을 빼먹었어도 문장으로 인식하고 교정하세요
+   - original: 원본 문장 (구두점이 없어도 그대로 표시)
    - corrected: 교정된 문장 (구두점 반드시 포함)
-   - explanation: 교정 설명 (한국어)
+   - explanation: 교정 설명 (한국어, 매우 자상하게)
+     * 구두점 누락 시: "문장 끝에는 마침표(.)를 붙여야 합니다."
+     * 관사 누락 시: "명사 앞에 'a', 'an', 'the'를 붙이면 더 자연스럽습니다. 'a'는 하나의 것, 'the'는 특정한 것을 가리킵니다."
+     * 전치사 누락 시: "장소를 말할 때는 'in', 'on', 'at'을 사용합니다. 'in the park', 'on the table', 'at school'처럼요!"
+     * 각 교정마다 왜 그렇게 쓰는지 친절하고 명확하게 설명
    - alternatives: 같은 의미의 다른 표현 방법 2-3개
 
 [핵심 원칙]
@@ -191,7 +188,17 @@ ${originalText}
 - 문법 교정뿐만 아니라 다양한 표현 방법 학습에 중점
 - 같은 의미도 상황, 톤, 레벨에 따라 다르게 표현할 수 있음을 안내
 - 레벨에 맞는 적절한 대체 표현 제시
+
+[구두점 교정 - 매우 중요]
+- ⚠️ 학습자는 쉼표(,)나 마침표(.)를 빼먹을 수 있습니다
+- 문장 끝에 마침표가 없어도 문장으로 인식하고 교정하세요
 - 쉼표, 마침표 등 구두점을 반드시 정확하게 교정
+- 문장 구분이 어려운 경우, 의미 단위로 나누어 판단하세요
+
+[관사와 전치사 교정 - 자상하게 설명]
+- 관사(a, an, the)와 전치사(in, on, at, with, to 등)는 학습자가 자주 빼먹는 부분입니다
+- 관사 누락 시 교정하고, explanation에 왜 필요한지 명확하게 설명하세요
+- 전치사 누락 시 교정하고, explanation에 언제 사용하는지 명확하게 설명하세요
 
 반드시 위의 JSON 형식으로만 응답하세요.`;
 
@@ -280,37 +287,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // API 키 가져오기
-    const apiKeys = await getAPIKeys();
+    // API 키 가져오기 및 검증
+    const apiKeys = getAPIKeys();
+    let openaiKey: string;
+    try {
+      openaiKey = validateAPIKey(apiKeys.openai, "OPENAI_API_KEY");
+    } catch (keyError: unknown) {
+      const error = keyError as Error;
+      console.error("❌ API 키 검증 실패:", maskSensitiveInfo(error.message));
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        { status: 500 }
+      );
+    }
 
     // GPT API 호출로 첨삭
     let correctionResult;
     console.log("=== API 키 확인 ===");
-    console.log("OpenAI API 키 존재:", !!apiKeys.openai);
+    console.log("OpenAI API 키 존재:", !!openaiKey);
     
-    if (apiKeys.openai && originalText) {
-      try {
-        console.log("GPT API 호출 시작...");
-        correctionResult = await correctCompositionWithOpenAI(
-          originalText, 
-          age, 
-          englishLevel, 
-          apiKeys.openai,
-          compositionType
-        );
-        console.log("GPT API 호출 성공:", correctionResult);
-      } catch (gptError: any) {
-        console.error("GPT 오류:", gptError);
-        console.error("오류 상세:", gptError.message);
-        correctionResult = null;
+    try {
+      console.log("🤖 GPT API 호출 시작...");
+      correctionResult = await correctCompositionWithOpenAI(
+        originalText, 
+        age, 
+        englishLevel, 
+        openaiKey,
+        compositionType
+      );
+      console.log("✅ GPT API 호출 성공");
+    } catch (gptError: unknown) {
+      const error = gptError as Error;
+      const errorMessage = error.message || "알 수 없는 오류가 발생했습니다.";
+      console.error("❌ GPT 오류:", maskSensitiveInfo(errorMessage));
+      
+      // API 키 관련 오류인 경우 한국어 메시지로 변환
+      let userFriendlyError = "작문 첨삭 처리 중 오류가 발생했습니다.";
+      if (error.message?.includes("API key") || error.message?.includes("401") || error.message?.includes("invalid")) {
+        userFriendlyError = "OpenAI API 키가 유효하지 않습니다. 관리자에게 문의해주세요.";
+      } else if (error.message?.includes("rate limit") || error.message?.includes("429")) {
+        userFriendlyError = "API 호출 한도가 초과되었습니다. 잠시 후 다시 시도해주세요.";
       }
-    } else {
-      console.log("API 키 없음 또는 텍스트 없음 - Mock 데이터 사용");
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: userFriendlyError,
+        },
+        { status: 500 }
+      );
     }
 
     // 결과 반환
     if (correctionResult) {
-      console.log("실제 API 결과 반환");
+      console.log("✅ 실제 API 결과 반환");
       return NextResponse.json({
         success: true,
         data: {
@@ -327,62 +360,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // API 키가 없거나 실패 시 Mock 데이터 사용
-    console.log("⚠️ Mock 데이터 반환 중 - API 호출 실패했거나 API 키 없음");
-    
-    const mockResponse = {
-      success: true,
-      data: {
-        originalText: originalText,
-        correctedText: "I wrote a letter to my friend. I told him about my day. It was very interesting.",
-        feedback: "작문을 잘 작성하셨네요! 문법적으로 정확하고 자연스러운 표현을 사용하셨습니다. 같은 의미를 다양한 방식으로 표현하는 연습을 더 하시면 좋을 것 같아요.",
-        corrections: [
-          {
-            original: "very interesting",
-            corrected: "really interesting",
-            explanation: "'very'보다 'really'가 더 자연스러운 구어 표현이에요.",
-            alternatives: ["extremely interesting", "quite fascinating", "so interesting"]
-          }
-        ],
-        sentenceExpansion: "편지에서 어떤 구체적인 내용을 친구에게 말했는지 더 자세히 써보면 어떨까요?",
-        expansionExample: "I wrote a heartfelt letter to my best friend. I shared with him the exciting events of my day. It turned out to be a really memorable experience.",
-        cheerUp: "다양한 표현 방법을 학습하고 있어요! 같은 의미도 여러 가지로 표현할 수 있다는 것을 기억하세요. 계속 연습하면 더 풍부한 영어 표현력을 갖게 될 거예요! 💪",
-        extractedWords: [
-          { word: "letter", meaning: "편지", level: "초급", example: "I wrote a letter." },
-          { word: "interesting", meaning: "흥미로운", level: "초급", example: "It was interesting." }
-        ],
-        alternativeExpressions: [
-          {
-            original: "I wrote a letter",
-            alternatives: [
-              { 
-                expression: "I composed a letter", 
-                level: "격식", 
-                explanation: "더 격식 있는 표현", 
-                example: "I composed a letter to the editor about this issue." 
-              },
-              { 
-                expression: "I sent a letter", 
-                level: "기본", 
-                explanation: "편지를 보냈다는 의미 강조", 
-                example: "I sent a letter to my friend yesterday." 
-              },
-              { 
-                expression: "I penned a letter", 
-                level: "문학적", 
-                explanation: "문학적이고 우아한 표현", 
-                example: "I penned a letter expressing my gratitude." 
-              }
-            ]
-          }
-        ],
-        apiStatus: {
-          openai: apiKeys.openai ? "configured" : "not_configured",
-        },
+    // 결과가 없는 경우 (이론적으로는 도달하지 않아야 함)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "작문 첨삭 결과를 생성할 수 없습니다.",
       },
-    };
-
-    return NextResponse.json(mockResponse);
+      { status: 500 }
+    );
   } catch (error) {
     console.error("Error processing composition:", error);
     return NextResponse.json(

@@ -73,9 +73,9 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* 모바일 헤더 */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-md z-50 px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
+      {/* 헤더 (모든 화면 크기에서 표시) */}
+      <div className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-md z-50 px-4 py-3 flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-800 dark:text-white">
           🛡️ 관리자
         </h1>
@@ -102,7 +102,7 @@ export default function AdminLayout({
         </button>
       </div>
 
-      {/* 모바일 메뉴 오버레이 */}
+      {/* 슬라이드 메뉴 (필요할 때만 열림) */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
@@ -111,14 +111,14 @@ export default function AdminLayout({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="lg:hidden fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 bg-black/50 z-40"
             />
             <motion.aside
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "tween", duration: 0.3 }}
-              className="lg:hidden fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-800 shadow-xl z-50 overflow-y-auto"
+              className="fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-800 shadow-xl z-50 overflow-y-auto"
             >
               <div className="p-6 pt-20">
                 <nav className="space-y-2">
@@ -130,7 +130,6 @@ export default function AdminLayout({
                   <AdminNavLink href="/admin/penpal/cancel-requests" onClick={() => setMobileMenuOpen(false)}>❌ 취소 요청 관리</AdminNavLink>
                   <AdminNavLink href="/admin/penpal/disputes" onClick={() => setMobileMenuOpen(false)}>📮 편지 분쟁 처리</AdminNavLink>
                   <AdminNavLink href="/admin/rewards" onClick={() => setMobileMenuOpen(false)}>🎁 포인트 & 리워드</AdminNavLink>
-                  <AdminNavLink href="/admin/pricing" onClick={() => setMobileMenuOpen(false)}>💰 요금제 관리</AdminNavLink>
                   <AdminNavLink href="/admin/ai" onClick={() => setMobileMenuOpen(false)}>🤖 AI 피드백 모니터링</AdminNavLink>
                   <AdminNavLink href="/admin/support" onClick={() => setMobileMenuOpen(false)}>💌 고객 지원</AdminNavLink>
                   <AdminNavLink href="/admin/settings" onClick={() => setMobileMenuOpen(false)}>⚙️ 설정/도구</AdminNavLink>
@@ -164,53 +163,11 @@ export default function AdminLayout({
         )}
       </AnimatePresence>
 
-      {/* 데스크톱 사이드바 */}
-      <aside className="hidden lg:block fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-800 shadow-lg z-10">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-8">
-            🛡️ 관리자
-          </h1>
-          <nav className="space-y-2">
-            <AdminNavLink href="/admin">📊 대시보드</AdminNavLink>
-            <AdminNavLink href="/admin/users">👨‍👩‍👧 유저/아이 관리</AdminNavLink>
-            <AdminNavLink href="/admin/content">📝 콘텐츠 검토</AdminNavLink>
-            <AdminNavLink href="/admin/board">📋 게시판 관리</AdminNavLink>
-            <AdminNavLink href="/admin/penpal">✉️ 펜팔 관리</AdminNavLink>
-            <AdminNavLink href="/admin/penpal/cancel-requests">❌ 취소 요청 관리</AdminNavLink>
-            <AdminNavLink href="/admin/penpal/disputes">📮 편지 분쟁 처리</AdminNavLink>
-            <AdminNavLink href="/admin/rewards">🎁 포인트 & 리워드</AdminNavLink>
-            <AdminNavLink href="/admin/pricing">💰 요금제 관리</AdminNavLink>
-            <AdminNavLink href="/admin/ai">🤖 AI 피드백 모니터링</AdminNavLink>
-            <AdminNavLink href="/admin/support">💌 고객 지원</AdminNavLink>
-            <AdminNavLink href="/admin/settings">⚙️ 설정/도구</AdminNavLink>
-            <AdminNavLink href="/admin/api-keys">🔑 API 키 설정</AdminNavLink>
-          </nav>
-        </div>
-        <div className="absolute bottom-4 left-4 right-4 space-y-2">
-          <Link
-            href="/"
-            className="block w-full text-center py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all"
-          >
-            🏠 홈으로
-          </Link>
-          <Link
-            href="/dashboard"
-            className="block w-full text-center py-2 px-4 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
-          >
-            ← 대시보드로
-          </Link>
-          <button
-            onClick={handleSignOut}
-            className="w-full py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all"
-          >
-            🚪 로그아웃
-          </button>
-        </div>
-      </aside>
-
       {/* 메인 콘텐츠 */}
-      <main className="lg:ml-64 pt-16 lg:pt-0 p-4 lg:p-8">
-        {children}
+      <main className="pt-16 w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+          {children}
+        </div>
       </main>
     </div>
   );

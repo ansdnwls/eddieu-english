@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
@@ -11,15 +11,27 @@ import { Post, PostCategory, POST_CATEGORIES } from "@/app/types";
 import { addSubjectParticle } from "@/app/utils/koreanHelper";
 import Link from "next/link";
 
-export default function BoardPage() {
+function BoardPageContent() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<PostCategory | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [isParent, setIsParent] = useState(false);
+
+  // URL 파라미터에서 카테고리 읽기
+  useEffect(() => {
+    const categoryParam = searchParams.get("category");
+    if (categoryParam) {
+      const validCategory = POST_CATEGORIES.find(c => c.value === categoryParam);
+      if (validCategory) {
+        setSelectedCategory(categoryParam as PostCategory);
+      }
+    }
+  }, [searchParams]);
 
   // 사용자 권한 확인
   useEffect(() => {
@@ -63,15 +75,34 @@ export default function BoardPage() {
         const snapshot = await getDocs(q);
         const postList: Post[] = [];
         
-        snapshot.forEach((doc) => {
-          const data = doc.data();
+        snapshot.forEach((docSnapshot) => {
+          const data = docSnapshot.data();
           // 삭제되지 않은 게시글만 추가
           if (!data.isDeleted) {
-            postList.push({
-              id: doc.id,
-              ...data,
+            const post: Post = {
+              id: docSnapshot.id,
+              title: data.title || "",
+              content: data.content || "",
+              authorId: data.authorId || "",
+              parentId: data.parentId || "",
+              authorName: data.authorName || "",
+              childName: data.childName || "",
+              category: data.category || "diary_share",
+              views: data.views || 0,
+              likes: data.likes || [],
               comments: data.comments || [],
-            } as Post);
+              isPinned: data.isPinned === true,
+              isPinnedAll: data.isPinnedAll === true, // 명시적으로 boolean 변환
+              isDeleted: data.isDeleted === true,
+              isRead: data.isRead === true, // 관리자 확인 여부
+              isPrivate: data.isPrivate === true, // 비밀글 여부
+              createdAt: data.createdAt || new Date().toISOString(),
+              updatedAt: data.updatedAt || new Date().toISOString(),
+              authorEmail: data.authorEmail,
+              authorNickname: data.authorNickname,
+              diaryId: data.diaryId,
+            };
+            postList.push(post);
           }
         });
 
@@ -79,24 +110,51 @@ export default function BoardPage() {
         let filteredPosts = postList;
         
         if (selectedCategory !== "all") {
-          // 선택한 카테고리 + 공지/미션 카테고리의 고정글
-          filteredPosts = postList.filter(post => 
-            post.category === selectedCategory || 
-            (post.category === "notice_mission" && post.isPinned)
-          );
+          // 선택한 카테고리의 모든 게시글 + 모든 게시판에 고정된 게시글 표시
+          filteredPosts = postList.filter(post => {
+            // 1. 선택한 카테고리의 게시글은 항상 표시
+            if (post.category === selectedCategory) return true;
+            
+            // 2. isPinnedAll이 true인 게시글은 모든 카테고리에서 표시
+            // notice_mission 카테고리를 선택한 경우는 제외
+            if (post.isPinnedAll === true && selectedCategory !== "notice_mission") {
+              return true;
+            }
+            
+            return false;
+          });
         } else {
           // "전체"를 선택한 경우: 공지/미션 제외한 모든 카테고리 표시
           filteredPosts = postList.filter(post => 
-            post.category !== "notice_mission" || post.isPinned
+            post.category !== "notice_mission"
           );
         }
+        
+        // 디버깅: isPinnedAll 게시글 확인
+        const allPinnedAllPosts = postList.filter(post => post.isPinnedAll === true);
+        console.log("📊 필터링 결과:", {
+          selectedCategory,
+          totalPosts: postList.length,
+          allPinnedAllPosts: allPinnedAllPosts.map(p => ({
+            title: p.title,
+            category: p.category,
+            isPinnedAll: p.isPinnedAll
+          })),
+          filteredPosts: filteredPosts.length,
+          filteredPinnedAllPosts: filteredPosts.filter(post => post.isPinnedAll === true).map(p => p.title)
+        });
 
         // 클라이언트 사이드에서 정렬 (고정 게시글 우선, 그 다음 날짜순)
         filteredPosts.sort((a, b) => {
-          // 고정 게시글 우선
+          // 1. 모든 게시판에 고정된 게시글을 최우선으로 배치
+          if (a.isPinnedAll && !b.isPinnedAll) return -1;
+          if (!a.isPinnedAll && b.isPinnedAll) return 1;
+          
+          // 2. 일반 고정 게시글을 다음으로 배치
           if (a.isPinned && !b.isPinned) return -1;
           if (!a.isPinned && b.isPinned) return 1;
-          // 날짜순 정렬 (최신순)
+          
+          // 3. 둘 다 고정이거나 둘 다 고정이 아닌 경우, 날짜순 정렬 (최신순)
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
 
@@ -145,27 +203,25 @@ export default function BoardPage() {
                 게시판
               </h1>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => router.back()}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+                className="hidden sm:flex px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
               >
                 ← 뒤로
               </button>
               <Link
                 href="/"
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+                className="px-3 sm:px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all text-sm sm:text-base"
               >
                 🏠 홈
               </Link>
-              {user && (
-                <Link
-                  href={`/board/write${selectedCategory !== "all" ? `?category=${selectedCategory}` : ""}`}
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all"
-                >
-                  ✏️ 글쓰기
-                </Link>
-              )}
+              <Link
+                href={`/board/write${selectedCategory !== "all" ? `?category=${selectedCategory}` : ""}`}
+                className="px-3 sm:px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all text-sm sm:text-base"
+              >
+                ✏️ 글쓰기
+              </Link>
             </div>
           </div>
         </header>
@@ -250,14 +306,12 @@ export default function BoardPage() {
               <p className="text-gray-600 dark:text-gray-400 mb-6">
                 첫 번째 게시글을 작성해보세요!
               </p>
-              {user && (
-                <Link
-                  href="/board/write"
-                  className="inline-block bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:scale-105 transition-all"
-                >
-                  글쓰기 →
-                </Link>
-              )}
+              <Link
+                href="/board/write"
+                className="inline-block bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:scale-105 transition-all"
+              >
+                글쓰기 →
+              </Link>
             </motion.div>
           ) : (
             <div className="space-y-4">
@@ -270,13 +324,17 @@ export default function BoardPage() {
                 >
                   <Link href={`/board/${post.id}`}>
                     <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-lg transition-all cursor-pointer border-2 border-transparent hover:border-blue-300 dark:hover:border-blue-600 ${
+                      post.isPinnedAll ? "border-purple-400 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/20" : 
                       post.isPinned ? "border-yellow-400 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20" : ""
                     }`}>
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            {post.isPinned && (
-                              <span className="text-yellow-500">📌</span>
+                            {post.isPinnedAll && (
+                              <span className="text-purple-500" title="모든 게시판에 고정">🌟</span>
+                            )}
+                            {post.isPinned && !post.isPinnedAll && (
+                              <span className="text-yellow-500" title="현재 게시판에 고정">📌</span>
                             )}
                             <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
                               {POST_CATEGORIES.find(c => c.value === post.category)?.emoji} {POST_CATEGORIES.find(c => c.value === post.category)?.label}
@@ -321,6 +379,21 @@ export default function BoardPage() {
         </main>
       </div>
     </AuthGuard>
+  );
+}
+
+export default function BoardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">로딩 중...</p>
+        </div>
+      </div>
+    }>
+      <BoardPageContent />
+    </Suspense>
   );
 }
 

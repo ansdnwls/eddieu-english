@@ -34,6 +34,7 @@ export default function VoicePlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(defaultVoice);
+  const [speed, setSpeed] = useState<number>(0.9); // 기본 속도
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
@@ -105,6 +106,9 @@ export default function VoicePlayer({
       // 오디오 재생
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
+      
+      // 속도 조정
+      audio.playbackRate = speed;
 
       audio.onended = () => {
         console.log("✅ 음성 재생 완료");
@@ -150,19 +154,39 @@ export default function VoicePlayer({
           🔊 원어민 발음 들어보기
         </h4>
         
-        {/* 음성 선택 */}
-        <select
-          value={selectedVoice}
-          onChange={(e) => setSelectedVoice(e.target.value as VoiceOption)}
-          disabled={isPlaying || isLoading}
-          className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {Object.entries(VOICE_DISPLAY_NAMES).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-2 flex-wrap items-center">
+          {/* 음성 선택 */}
+          <select
+            value={selectedVoice}
+            onChange={(e) => setSelectedVoice(e.target.value as VoiceOption)}
+            disabled={isPlaying || isLoading}
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {Object.entries(VOICE_DISPLAY_NAMES).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          
+          {/* 속도 조정 */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+            <label className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">속도:</label>
+            <input
+              type="range"
+              min="0.5"
+              max="1.2"
+              step="0.05"
+              value={speed}
+              onChange={(e) => setSpeed(parseFloat(e.target.value))}
+              className="w-20"
+              disabled={isPlaying || isLoading}
+            />
+            <span className="text-xs text-gray-700 dark:text-gray-300 w-10 text-right">
+              {speed.toFixed(2)}x
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* 텍스트 표시 */}
