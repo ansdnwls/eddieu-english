@@ -312,6 +312,7 @@ export default function AdminDashboard() {
     { title: "GPT API", value: stats.monthlyGptApi, color: "violet", link: "/admin/ai" },
     { title: "음성 API", value: stats.monthlyVoiceApi, color: "indigo", link: "/admin/ai" },
     { title: "구글 API", value: stats.monthlyGoogleApi, color: "teal", link: "/admin/ai" },
+    { title: "요금제 관리", value: 0, color: "emerald", link: "/admin/pricing" },
   ];
 
   // 색상 매핑
@@ -328,41 +329,43 @@ export default function AdminDashboard() {
     violet: "bg-gradient-to-br from-violet-500 to-violet-600",
     indigo: "bg-gradient-to-br from-indigo-500 to-indigo-600",
     teal: "bg-gradient-to-br from-teal-500 to-teal-600",
+    emerald: "bg-gradient-to-br from-emerald-500 to-emerald-600",
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white px-2 sm:px-0">
         📊 관리자 대시보드
       </h1>
 
       {/* 통계 카드 그리드 */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 px-2 sm:px-0">
         {cards.map((card, index) => (
           <motion.div
             key={card.title}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: index * 0.05 }}
+            className="w-full"
           >
-            <Link href={card.link}>
+            <Link href={card.link} className="block w-full">
               <div
-                className={`${colorClasses[card.color]} rounded-2xl shadow-lg p-6 sm:p-8 text-white cursor-pointer hover:scale-105 transition-transform duration-300 relative`}
+                className={`${colorClasses[card.color]} rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8 text-white cursor-pointer active:scale-95 hover:scale-105 transition-transform duration-200 relative min-h-[120px] sm:min-h-[140px] flex flex-col justify-between`}
               >
                 {/* 배지 (알림 있을 때) */}
                 {card.badge && card.value > 0 && (
-                  <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center shadow-lg animate-pulse">
-                    {card.value}
+                  <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-red-500 text-white text-xs font-bold rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center shadow-lg animate-pulse">
+                    {card.value > 99 ? "99+" : card.value}
                   </div>
                 )}
 
                 {/* 제목 */}
-                <div className="text-lg sm:text-xl font-bold mb-4 opacity-90">
+                <div className="text-sm sm:text-lg lg:text-xl font-bold mb-2 sm:mb-4 opacity-90 leading-tight">
                   {card.title}
                 </div>
 
                 {/* 숫자 */}
-                <div className="text-4xl sm:text-5xl font-extrabold">
+                <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold leading-none">
                   {card.value.toLocaleString()}
                 </div>
               </div>
@@ -376,15 +379,15 @@ export default function AdminDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6"
+        className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 sm:p-6 mx-2 sm:mx-0"
       >
         <div className="flex items-start gap-3">
-          <div className="text-2xl">💡</div>
-          <div className="flex-1">
-            <h3 className="font-bold text-gray-800 dark:text-white mb-2">
+          <div className="text-xl sm:text-2xl flex-shrink-0">💡</div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-gray-800 dark:text-white mb-2 text-sm sm:text-base">
               대시보드 안내
             </h3>
-            <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+            <ul className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1">
               <li>• 각 카드를 클릭하면 해당 관리 페이지로 이동합니다</li>
               <li>• Q&A와 광고문의는 확인하지 않은 새 게시글 수를 표시합니다</li>
               <li>• API 호출 수는 이번 달 누적 사용량입니다</li>

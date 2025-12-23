@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PaymentConfirmRequest, PaymentInfo, Subscription } from "@/app/types";
 import { db } from "@/lib/firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 // Buffer 사용을 위해 Node.js 런타임 지정
 export const runtime = "nodejs";
@@ -81,12 +81,40 @@ export async function POST(request: NextRequest) {
         const isSubscription = paymentData.orderId.startsWith("plan_");
         
         if (isSubscription) {
-          // 구독 플랜 결정
+          // Firestore에서 요금제 정보 조회
           let planName = "베이직";
           let planId = "basic";
-          if (paymentData.totalAmount >= 19900) {
-            planName = "프리미엄";
-            planId = "premium";
+          
+          try {
+            const firestoreDb = db as NonNullable<typeof db>;
+            const plansQuery = query(
+              collection(firestoreDb, "pricingPlans"),
+              where("orderId", "==", paymentData.orderId)
+            );
+            const plansSnapshot = await getDocs(plansQuery);
+            
+            if (!plansSnapshot.empty) {
+              // 관리자에서 생성한 요금제 정보 사용
+              const planData = plansSnapshot.docs[0].data();
+              planName = planData.name || "베이직";
+              // planId는 name을 기반으로 생성 (소문자, 공백 제거)
+              planId = (planData.name || "basic").toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+              console.log("✅ 요금제 정보 조회 성공:", { planName, planId, orderId: paymentData.orderId });
+            } else {
+              // 요금제를 찾지 못한 경우 가격 기준으로 fallback
+              console.warn("⚠️ 요금제 정보를 찾지 못함, 가격 기준으로 판단:", paymentData.orderId);
+              if (paymentData.totalAmount >= 19900) {
+                planName = "프리미엄";
+                planId = "premium";
+              }
+            }
+          } catch (planError) {
+            console.error("❌ 요금제 정보 조회 오류:", planError);
+            // 오류 발생 시 가격 기준으로 fallback
+            if (paymentData.totalAmount >= 19900) {
+              planName = "프리미엄";
+              planId = "premium";
+            }
           }
 
           // 빌링키 발급 (구독 결제용)
