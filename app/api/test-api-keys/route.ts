@@ -1,47 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
 
 // API 키 테스트 엔드포인트
 export async function GET(request: NextRequest) {
   try {
-    // API 키 가져오기 (Firestore에서 우선, 없으면 환경 변수)
-    let apiKeys = {
-      openai: "",
-      googleVision: "",
-      tts: "",
-      elevenlabs: "",
+    // API 키 가져오기 (환경 변수에서만 가져오기 - 서버 사이드)
+    const apiKeys = {
+      openai: process.env.OPENAI_API_KEY || "",
+      googleVision: process.env.GOOGLE_VISION_API_KEY || "",
+      tts: process.env.TTS_API_KEY || "",
+      elevenlabs: process.env.ELEVENLABS_API_KEY || "",
     };
-
-    // Firestore에서 가져오기 (관리자 페이지에서 입력한 값)
-    if (db) {
-      try {
-        const docRef = doc(db, "admin_settings", "api_keys");
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          apiKeys = {
-            openai: data.openai || "",
-            googleVision: data.googleVision || "",
-            tts: data.tts || "",
-            elevenlabs: data.elevenlabs || "",
-          };
-        }
-      } catch (error) {
-        console.error("Firestore에서 API 키 로드 실패:", error);
-      }
-    }
-
-    // Firestore에 값이 없으면 환경 변수 사용
-    if (!apiKeys.openai && !apiKeys.googleVision && !apiKeys.elevenlabs) {
-      apiKeys = {
-        openai: process.env.OPENAI_API_KEY || "",
-        googleVision: process.env.GOOGLE_VISION_API_KEY || "",
-        tts: process.env.TTS_API_KEY || "",
-        elevenlabs: process.env.ELEVENLABS_API_KEY || "",
-      };
-    }
 
     const results: any = {
       openai: { configured: false, tested: false, error: null },

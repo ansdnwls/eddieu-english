@@ -230,7 +230,7 @@ export default function VocabularyPage() {
                   : "작문을 작성하면 단어가 자동으로 추가됩니다!"}
               </p>
               <Link
-                href="/"
+                href={currentAccountType === "child" ? "/#upload-section" : "/composition"}
                 className="inline-block bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:scale-105 transition-all"
               >
                 {currentAccountType === "child" ? "일기 작성하기 →" : "작문 작성하기 →"}

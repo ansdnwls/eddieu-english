@@ -9,6 +9,7 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import CorrectionResult from "./components/CorrectionResult";
 import { CorrectionResult as CorrectionResultType } from "./types";
 import Link from "next/link";
+import Image from "next/image";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { EnglishLevel } from "./types";
@@ -48,6 +49,36 @@ function HomeContent() {
   // 오늘의 일기 배지 수상자 (커스텀 훅 사용)
   const { featuredUser } = useFeaturedDiary();
 
+  // 플래시 메시지 로테이션 상태
+  const [currentMessageIndex, setCurrentMessageIndex] = useState<number>(0);
+  
+  const heroMessages = [
+    {
+      title: "사진 한 장으로",
+      subtitle: "영어 실력이 쑥쑥",
+      description: "손글씨 영어일기를 사진으로 찍기만 하면,\nAI 선생님이 친절하게 첨삭하고 단어까지 학습시켜드려요"
+    },
+    {
+      title: "읽기만 하지 말고",
+      subtitle: "직접 말해보세요",
+      description: "AI 원어민 발음을 듣고 따라 말하기!\n일기 내용으로 생성형 AI와 실시간 영어 대화까지 가능해요"
+    },
+    {
+      title: "국내 친구들과",
+      subtitle: "영어편지 교환",
+      description: "같은 또래 친구들과 영어로 편지를 주고받으며 함께 성장해요.\n안전한 국내 펜팔 매칭!"
+    }
+  ];
+
+  // 메시지 자동 전환 (5초마다)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentMessageIndex((prev) => (prev + 1) % heroMessages.length);
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -57,7 +88,7 @@ function HomeContent() {
     }
   };
 
-  // URL 파라미터 확인 (사진 업로드 모드)
+  // URL 파라미터 확인 (사진 업로드 모드) 및 해시 확인
   useEffect(() => {
     const mode = searchParams.get("mode");
     if (mode === "upload") {
@@ -69,6 +100,16 @@ function HomeContent() {
           uploadSection.scrollIntoView({ behavior: "smooth", block: "start" });
         }
       }, 100);
+    }
+    
+    // 해시가 upload-section인 경우 스크롤
+    if (window.location.hash === "#upload-section") {
+      setTimeout(() => {
+        const uploadSection = document.getElementById("upload-section");
+        if (uploadSection) {
+          uploadSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 300);
     }
   }, [searchParams]);
 
@@ -312,15 +353,22 @@ function HomeContent() {
           >
             {/* 로고 */}
             <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-2xl">✨</span>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                <Image 
+                  src="/icon-192x192.png?v=2" 
+                  alt="EddieU AI 로고" 
+                  width={40} 
+                  height={40}
+                  className="w-full h-full object-cover"
+                  priority
+                />
               </div>
               <div>
                 <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  DiaryAI
+                  EddieU AI
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
-                  영어일기 AI 첨삭 플랫폼
+                  영어일기·작문·스피킹 올인원
                 </p>
               </div>
             </Link>
@@ -432,21 +480,49 @@ function HomeContent() {
                     </span>
                   </motion.div>
 
-                  {/* 메인 헤드라인 */}
+                  {/* 메인 헤드라인 - 플래시 애니메이션 */}
                   <div className="space-y-6">
-                    <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">
+                    <motion.h1 
+                      key={currentMessageIndex}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.6 }}
+                      className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight"
+                    >
                       <span className="block text-gray-900 dark:text-white mb-2">
-                        아이의 영어 일기를
+                        {heroMessages[currentMessageIndex].title}
                       </span>
                       <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                        AI가 첨삭해드려요
+                        {heroMessages[currentMessageIndex].subtitle}
                       </span>
-                    </h1>
-                    <p className="max-w-3xl mx-auto text-xl sm:text-2xl text-gray-600 dark:text-gray-300 leading-relaxed">
-                      {currentAccountType === "child" 
-                        ? "사진만 업로드하면 AI 선생님이 따뜻하게 첨삭하고, 단어 학습까지 도와드려요" 
-                        : "사진이나 텍스트를 입력하면 AI가 전문적으로 첨삭하고 학습 분석을 제공합니다"}
-                    </p>
+                    </motion.h1>
+                    <motion.p 
+                      key={`desc-${currentMessageIndex}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.6, delay: 0.1 }}
+                      className="max-w-3xl mx-auto text-xl sm:text-2xl text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line"
+                    >
+                      {heroMessages[currentMessageIndex].description}
+                    </motion.p>
+                    
+                    {/* 인디케이터 점들 */}
+                    <div className="flex items-center justify-center gap-2 pt-4">
+                      {heroMessages.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setCurrentMessageIndex(index)}
+                          className={`transition-all ${
+                            index === currentMessageIndex
+                              ? "w-8 h-2 bg-gradient-to-r from-blue-600 to-purple-600"
+                              : "w-2 h-2 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500"
+                          } rounded-full`}
+                          aria-label={`메시지 ${index + 1}로 이동`}
+                        />
+                      ))}
+                    </div>
                   </div>
 
                   {/* CTA 버튼 */}
@@ -656,7 +732,7 @@ function HomeContent() {
                     학부모님들의 생생한 후기
                   </h2>
                   <p className="text-lg text-gray-600 dark:text-gray-400">
-                    DiaryAI와 함께 영어 실력이 향상된 아이들의 이야기
+                    EddieU AI와 함께 영어 실력이 향상된 아이들의 이야기
                   </p>
                 </motion.div>
 
@@ -679,7 +755,7 @@ function HomeContent() {
                         <span className="text-blue-600 dark:text-blue-400 font-semibold">김</span>
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900 dark:text-white">김지은 님</div>
+                        <div className="font-semibold text-gray-900 dark:text-white">김X은 님</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">초등 3학년 학부모</div>
                       </div>
                     </div>
@@ -703,7 +779,7 @@ function HomeContent() {
                         <span className="text-purple-600 dark:text-purple-400 font-semibold">이</span>
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900 dark:text-white">이수진 님</div>
+                        <div className="font-semibold text-gray-900 dark:text-white">이X진 님</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">초등 2학년 학부모</div>
                       </div>
                     </div>
@@ -727,7 +803,7 @@ function HomeContent() {
                         <span className="text-pink-600 dark:text-pink-400 font-semibold">박</span>
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900 dark:text-white">박민수 님</div>
+                        <div className="font-semibold text-gray-900 dark:text-white">박X수 님</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">초등 4학년 학부모</div>
                       </div>
                     </div>
@@ -924,11 +1000,17 @@ function HomeContent() {
             {/* 로고 및 설명 */}
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-xl">✨</span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
+                  <Image 
+                    src="/icon-192x192.png?v=2" 
+                    alt="EddieU AI 로고" 
+                    width={32} 
+                    height={32}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  DiaryAI
+                  EddieU AI
                 </span>
               </div>
               <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-sm">
@@ -984,7 +1066,7 @@ function HomeContent() {
           {/* 하단 정보 */}
           <div className="pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              © 2024 DiaryAI. Made with ❤️ for kids learning English.
+              © 2024 EddieU AI. Made with ❤️ for kids learning English.
             </p>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-500 dark:text-gray-400">Powered by OpenAI GPT-4</span>

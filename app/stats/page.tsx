@@ -308,7 +308,7 @@ export default function StatsPage() {
                   : "작문을 작성하면 학습 통계를 확인할 수 있습니다!"}
               </p>
               <Link
-                href="/"
+                href={currentAccountType === "child" ? "/#upload-section" : "/composition"}
                 className="inline-block bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:scale-105 transition-all"
               >
                 {currentAccountType === "child" ? "일기 작성하기 →" : "작문 작성하기 →"}

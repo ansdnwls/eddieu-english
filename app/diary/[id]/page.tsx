@@ -353,6 +353,358 @@ ${diary.originalText}
     alert("프롬프트를 수동으로 복사해주세요:\n\n" + text.substring(0, 200) + "...\n\n(아래 텍스트를 길게 눌러 복사하세요)");
   };
 
+  // 일기 인쇄 함수
+  const handlePrintDiary = () => {
+    // 인쇄용 스타일 추가
+    const printStyle = document.createElement("style");
+    printStyle.textContent = `
+      @media print {
+        /* 인쇄 시 숨길 요소 */
+        header,
+        .print\\:hidden,
+        button,
+        a,
+        .bg-gradient-to-r,
+        .bg-gradient-to-br,
+        .shadow-lg,
+        .shadow-xl,
+        .shadow-md,
+        .hover\\:scale-105,
+        .hover\\:shadow-xl,
+        .transition-all,
+        .transition-transform,
+        .animate-spin,
+        .animate-pulse {
+          display: none !important;
+        }
+
+        /* 인쇄용 레이아웃 */
+        body {
+          background: white !important;
+          color: black !important;
+          font-size: 12pt;
+          line-height: 1.6;
+        }
+
+        .print\\:block {
+          display: block !important;
+        }
+
+        /* 인쇄용 컨테이너 */
+        .print-container {
+          max-width: 100% !important;
+          margin: 0 !important;
+          padding: 20px !important;
+        }
+
+        /* 인쇄용 섹션 스타일 */
+        .print-section {
+          page-break-inside: avoid;
+          margin-bottom: 20px;
+          padding: 15px;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+        }
+
+        .print-title {
+          font-size: 16pt;
+          font-weight: bold;
+          margin-bottom: 10px;
+          color: #333;
+          border-bottom: 2px solid #333;
+          padding-bottom: 5px;
+        }
+
+        .print-content {
+          font-size: 11pt;
+          line-height: 1.8;
+          color: #000;
+        }
+
+        /* 원본/교정 비교 */
+        .print-comparison {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 15px;
+          margin-bottom: 20px;
+        }
+
+        .print-original {
+          border: 1px solid #ccc;
+          padding: 10px;
+          background: #f9f9f9;
+        }
+
+        .print-corrected {
+          border: 1px solid #4a90e2;
+          padding: 10px;
+          background: #e8f4f8;
+        }
+
+        /* 교정 내역 */
+        .print-correction-item {
+          margin-bottom: 10px;
+          padding: 8px;
+          border-left: 3px solid #4a90e2;
+          background: #f0f8ff;
+        }
+
+        /* 단어 카드 */
+        .print-word-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          margin-top: 10px;
+        }
+
+        .print-word-card {
+          border: 1px solid #ddd;
+          padding: 8px;
+          border-radius: 4px;
+          background: #f9f9f9;
+        }
+
+        /* 페이지 나누기 */
+        .print-page-break {
+          page-break-after: always;
+        }
+
+        /* 헤더/푸터 제거 */
+        @page {
+          margin: 1.5cm;
+        }
+      }
+    `;
+    document.head.appendChild(printStyle);
+
+    // 인쇄용 HTML 생성
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("팝업이 차단되어 있습니다. 팝업을 허용해주세요.");
+      return;
+    }
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>일기 인쇄 - ${new Date(diary.createdAt).toLocaleDateString("ko-KR")}</title>
+          <style>
+            body {
+              font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif;
+              max-width: 210mm;
+              margin: 0 auto;
+              padding: 20px;
+              background: white;
+              color: black;
+              font-size: 12pt;
+              line-height: 1.6;
+            }
+            .print-header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 3px solid #333;
+              padding-bottom: 15px;
+            }
+            .print-header h1 {
+              font-size: 24pt;
+              margin: 0 0 10px 0;
+              color: #333;
+            }
+            .print-header .date {
+              font-size: 14pt;
+              color: #666;
+            }
+            .print-section {
+              page-break-inside: avoid;
+              margin-bottom: 25px;
+              padding: 15px;
+              border: 1px solid #ddd;
+              border-radius: 8px;
+            }
+            .print-title {
+              font-size: 16pt;
+              font-weight: bold;
+              margin-bottom: 12px;
+              color: #333;
+              border-bottom: 2px solid #333;
+              padding-bottom: 5px;
+            }
+            .print-content {
+              font-size: 11pt;
+              line-height: 1.8;
+              color: #000;
+              white-space: pre-wrap;
+            }
+            .print-comparison {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 15px;
+              margin-bottom: 20px;
+            }
+            .print-original {
+              border: 1px solid #ccc;
+              padding: 12px;
+              background: #f9f9f9;
+              border-radius: 4px;
+            }
+            .print-original h4 {
+              margin: 0 0 8px 0;
+              font-size: 12pt;
+              color: #666;
+            }
+            .print-corrected {
+              border: 1px solid #4a90e2;
+              padding: 12px;
+              background: #e8f4f8;
+              border-radius: 4px;
+            }
+            .print-corrected h4 {
+              margin: 0 0 8px 0;
+              font-size: 12pt;
+              color: #4a90e2;
+            }
+            .print-correction-item {
+              margin-bottom: 12px;
+              padding: 10px;
+              border-left: 4px solid #4a90e2;
+              background: #f0f8ff;
+              border-radius: 4px;
+            }
+            .print-correction-item .original {
+              text-decoration: line-through;
+              color: #666;
+              margin-right: 8px;
+            }
+            .print-correction-item .corrected {
+              color: #4a90e2;
+              font-weight: bold;
+            }
+            .print-correction-item .explanation {
+              margin-top: 5px;
+              font-size: 10pt;
+              color: #555;
+            }
+            .print-word-grid {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 10px;
+              margin-top: 10px;
+            }
+            .print-word-card {
+              border: 1px solid #ddd;
+              padding: 10px;
+              border-radius: 4px;
+              background: #f9f9f9;
+            }
+            .print-word-card .word {
+              font-weight: bold;
+              font-size: 13pt;
+              color: #4a90e2;
+              margin-bottom: 5px;
+            }
+            .print-word-card .meaning {
+              font-size: 10pt;
+              color: #666;
+            }
+            @media print {
+              body {
+                margin: 0;
+                padding: 15px;
+              }
+              .print-section {
+                page-break-inside: avoid;
+              }
+              @page {
+                margin: 1.5cm;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-header">
+            <h1>📝 영어 일기 학습 자료</h1>
+            <div class="date">작성일: ${new Date(diary.createdAt).toLocaleDateString("ko-KR", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })} | 레벨: ${diary.englishLevel}</div>
+          </div>
+
+          <!-- AI 선생님의 피드백 -->
+          <div class="print-section">
+            <div class="print-title">🤖 AI 선생님의 피드백</div>
+            <div class="print-content">${diary.feedback || "피드백이 없습니다."}</div>
+          </div>
+
+          <!-- 원본 일기 & 교정된 일기 -->
+          <div class="print-section">
+            <div class="print-title">📝 원본 일기 & ✨ 교정된 일기</div>
+            <div class="print-comparison">
+              <div class="print-original">
+                <h4>📝 원본 일기</h4>
+                <div class="print-content">${diary.originalText || ""}</div>
+              </div>
+              <div class="print-corrected">
+                <h4>✨ 교정된 일기</h4>
+                <div class="print-content">${diary.correctedText || ""}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 교정 내역 -->
+          ${diary.corrections && diary.corrections.length > 0 ? `
+          <div class="print-section">
+            <div class="print-title">✏️ 교정 내역</div>
+            ${diary.corrections.map((correction: any) => `
+              <div class="print-correction-item">
+                <div>
+                  <span class="original">${correction.original || ""}</span>
+                  <span>→</span>
+                  <span class="corrected">${correction.corrected || ""}</span>
+                </div>
+                ${correction.explanation ? `<div class="explanation">${correction.explanation}</div>` : ""}
+              </div>
+            `).join("")}
+          </div>
+          ` : ""}
+
+          <!-- 주요 단어 -->
+          ${diary.extractedWords && diary.extractedWords.length > 0 ? `
+          <div class="print-section">
+            <div class="print-title">📚 주요 단어</div>
+            <div class="print-word-grid">
+              ${diary.extractedWords.map((word: any) => `
+                <div class="print-word-card">
+                  <div class="word">${word.word || ""}</div>
+                  ${word.meaning ? `<div class="meaning">${word.meaning}</div>` : ""}
+                </div>
+              `).join("")}
+            </div>
+          </div>
+          ` : ""}
+
+          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 10pt;">
+            EddieU English - AI 영어 일기 첨삭 서비스
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+
+    // 인쇄 대화상자 열기
+    setTimeout(() => {
+      printWindow.print();
+      // 인쇄 후 스타일 제거
+      setTimeout(() => {
+        document.head.removeChild(printStyle);
+      }, 1000);
+    }, 250);
+  };
+
   if (loading) {
     return (
       <AuthGuard>
@@ -426,15 +778,30 @@ ${diary.originalText}
         {/* 메인 콘텐츠 */}
         <main className="max-w-4xl mx-auto px-4 py-12">
           <div className="space-y-6">
-            {/* 응원 메시지 */}
+            {/* AI 피드백 - 제일 위로 이동 */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 rounded-2xl p-6 text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-purple-50 dark:bg-purple-900/30 rounded-2xl p-6"
             >
-              <div className="text-4xl mb-3">🎉</div>
-              <p className="text-xl font-bold text-gray-800 dark:text-gray-200">
-                {diary.encouragement}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🤖</span>
+                  <h3 className="text-lg font-bold text-purple-700 dark:text-purple-300">
+                    AI 선생님의 피드백
+                  </h3>
+                </div>
+                <button
+                  onClick={handlePrintDiary}
+                  className="flex items-center gap-2 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all print:hidden"
+                  title="인쇄하기"
+                >
+                  <span>🖨️</span>
+                  <span className="hidden sm:inline">인쇄하기</span>
+                </button>
+              </div>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                {diary.feedback}
               </p>
             </motion.div>
 
@@ -474,23 +841,6 @@ ${diary.originalText}
                 </p>
               </motion.div>
             </div>
-
-            {/* AI 피드백 */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-purple-50 dark:bg-purple-900/30 rounded-2xl p-6"
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-2xl">🤖</span>
-                <h3 className="text-lg font-bold text-purple-700 dark:text-purple-300">
-                  AI 선생님의 피드백
-                </h3>
-              </div>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                {diary.feedback}
-              </p>
-            </motion.div>
 
             {/* 교정 내역 */}
             {diary.corrections && diary.corrections.length > 0 && (
@@ -876,6 +1226,18 @@ ${diary.originalText}
                 )}
 
               </motion.div>
+
+            {/* 응원 메시지 - 맨 아래로 이동 */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 rounded-2xl p-6 text-center"
+            >
+              <div className="text-4xl mb-3">🎉</div>
+              <p className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                {diary.encouragement || diary.cheerUp || "잘하고 있어요! 계속 연습해봐요! 💪"}
+              </p>
+            </motion.div>
 
             {/* 뒤로 가기 버튼 */}
             <div className="flex justify-center">

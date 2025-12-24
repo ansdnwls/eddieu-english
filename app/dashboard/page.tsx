@@ -8,6 +8,7 @@ import AuthGuard from "@/components/AuthGuard";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
+import Image from "next/image";
 import DiaryList from "./diary-list";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { DiaryEntry } from "@/app/types";
@@ -209,7 +210,16 @@ export default function DashboardPage() {
         <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm">
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-              <span className="text-3xl">✨</span>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                <Image 
+                  src="/icon-192x192.png?v=2" 
+                  alt="EddieU AI 로고" 
+                  width={40} 
+                  height={40}
+                  className="w-full h-full object-cover"
+                  priority
+                />
+              </div>
               <h1 className="text-xl font-bold text-gray-800 dark:text-white">
                 {currentAccountType === "child" ? "아이 영어일기 AI 첨삭" : "영어 작문 AI 첨삭"}
               </h1>
@@ -381,7 +391,7 @@ export default function DashboardPage() {
               </div>
 
               {/* 메인 기능 버튼 */}
-              <Link href="/?mode=upload">
+              <Link href="/#upload-section">
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

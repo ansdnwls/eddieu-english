@@ -193,7 +193,7 @@ export default function DiaryList({ userId, currentAccountType: propAccountType 
         </p>
         <div className="flex gap-3 justify-center">
           <Link
-            href="/"
+            href="/#upload-section"
             className="inline-block bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:scale-105 transition-all"
           >
             📔 일기 작성하기 →

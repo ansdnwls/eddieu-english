@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs, query, orderBy, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -118,12 +119,19 @@ export default function PricingPage() {
             className="flex items-center justify-between h-16"
           >
             <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-2xl">✨</span>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                <Image 
+                  src="/icon-192x192.png?v=2" 
+                  alt="EddieU AI 로고" 
+                  width={40} 
+                  height={40}
+                  className="w-full h-full object-cover"
+                  priority
+                />
               </div>
               <div>
                 <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  DiaryAI
+                  EddieU AI
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
                   영어일기 AI 첨삭 플랫폼
@@ -360,11 +368,17 @@ export default function PricingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-xl">✨</span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
+                  <Image 
+                    src="/icon-192x192.png?v=2" 
+                    alt="EddieU AI 로고" 
+                    width={32} 
+                    height={32}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  DiaryAI
+                  EddieU AI
                 </span>
               </div>
               <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-sm">
@@ -440,7 +454,7 @@ export default function PricingPage() {
 
           <div className="pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              © 2024 DiaryAI. Made with ❤️ for kids learning English.
+              © 2024 EddieU AI. Made with ❤️ for kids learning English.
             </p>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-500 dark:text-gray-400">
