@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { VoiceOption } from "../types";
+import { useAuth } from "@/contexts/AuthContext";
+import { checkUserSubscription, SubscriptionStatus } from "@/lib/subscription/checkSubscription";
 
 interface VoicePlayerProps {
   text: string;
@@ -31,13 +34,23 @@ export default function VoicePlayer({
   onPlayStart,
   onPlayEnd,
 }: VoicePlayerProps) {
+  const { user } = useAuth();
+  const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(defaultVoice);
   const [speed, setSpeed] = useState<number>(0.9); // 기본 속도
   const [error, setError] = useState<string | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+
+  // 구독 상태 확인
+  useEffect(() => {
+    if (user) {
+      checkUserSubscription(user.uid).then(setSubscriptionStatus);
+    }
+  }, [user]);
 
   // 오디오 정리
   useEffect(() => {
@@ -56,6 +69,18 @@ export default function VoicePlayer({
   const handlePlay = async () => {
     if (!text || text.trim().length === 0) {
       setError("재생할 텍스트가 없습니다.");
+      return;
+    }
+
+    // 구독 체크
+    if (!subscriptionStatus?.isActive) {
+      const confirmUpgrade = confirm(
+        "🔒 TTS 음성 듣기 기능은 유료 구독 후 이용 가능합니다.\n\n" +
+        "구독 페이지로 이동하시겠습니까?"
+      );
+      if (confirmUpgrade) {
+        router.push("/pricing");
+      }
       return;
     }
 

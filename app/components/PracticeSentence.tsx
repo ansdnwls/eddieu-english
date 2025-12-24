@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { checkUserSubscription, SubscriptionStatus } from "@/lib/subscription/checkSubscription";
 
 interface PracticeSentenceProps {
   sentence: string;
@@ -14,12 +17,15 @@ type TTSProvider = "browser" | "elevenlabs";
 type GenderType = "female" | "male";
 
 export default function PracticeSentence({ sentence, original, englishLevel = "Lv.1" }: PracticeSentenceProps) {
+  const { user } = useAuth();
+  const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingVoice, setIsLoadingVoice] = useState(false);
   const [accent, setAccent] = useState<AccentType>("US");
   const [ttsProvider, setTtsProvider] = useState<TTSProvider>("elevenlabs"); // 기본값: ElevenLabs
   const [gender, setGender] = useState<GenderType>("female"); // 기본값: 여성
   const [speed, setSpeed] = useState<number>(0.8); // 기본 속도
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   
@@ -49,6 +55,13 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
   const audioChunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<any>(null);
   const playbackAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // 구독 상태 확인
+  useEffect(() => {
+    if (user) {
+      checkUserSubscription(user.uid).then(setSubscriptionStatus);
+    }
+  }, [user]);
 
   // 녹음 및 음성 인식 지원 확인
   useEffect(() => {
@@ -391,6 +404,18 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
 
   // ElevenLabs로 음성 재생
   const handleElevenLabsSpeak = async () => {
+    // 구독 체크
+    if (!subscriptionStatus?.isActive) {
+      const confirmUpgrade = confirm(
+        "🔒 TTS 음성 듣기 기능은 유료 구독 후 이용 가능합니다.\n\n" +
+        "구독 페이지로 이동하시겠습니까?"
+      );
+      if (confirmUpgrade) {
+        router.push("/pricing");
+      }
+      return;
+    }
+
     setIsLoadingVoice(true);
     setIsPlaying(true);
     
@@ -610,6 +635,18 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
 
   // 녹음 시작 + 실시간 음성 인식
   const handleStartRecording = async () => {
+    // 구독 체크
+    if (!subscriptionStatus?.isActive) {
+      const confirmUpgrade = confirm(
+        "🔒 발음 녹음 연습 기능은 유료 구독 후 이용 가능합니다.\n\n" +
+        "구독 페이지로 이동하시겠습니까?"
+      );
+      if (confirmUpgrade) {
+        router.push("/pricing");
+      }
+      return;
+    }
+
     // 브라우저/환경 지원 확인
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       alert("이 브라우저는 음성 녹음을 지원하지 않습니다. Chrome, Firefox, Edge 최신 버전을 사용해주세요. (HTTPS 또는 localhost에서만 작동합니다)");

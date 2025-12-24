@@ -22,6 +22,7 @@ export default function StatsPage() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [monthlyReport, setMonthlyReport] = useState<MonthlyReport | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [reportCached, setReportCached] = useState(false);
 
   useEffect(() => {
     const accountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
@@ -109,7 +110,13 @@ export default function StatsPage() {
         const dailyMap = new Map<string, { wordCount: number; entryCount: number }>();
         
         filteredDiaries.forEach((diary) => {
-          const date = new Date(diary.createdAt).toISOString().split("T")[0]; // YYYY-MM-DD
+          // 한국 시간대(KST) 기준으로 날짜 계산
+          const diaryDate = new Date(diary.createdAt);
+          // 한국 시간대로 변환 (toLocaleDateString 사용)
+          const year = diaryDate.getFullYear();
+          const month = String(diaryDate.getMonth() + 1).padStart(2, '0');
+          const day = String(diaryDate.getDate()).padStart(2, '0');
+          const date = `${year}-${month}-${day}`; // YYYY-MM-DD
           const wordCount = diary.stats?.wordCount || 0;
           
           if (dailyMap.has(date)) {
@@ -123,13 +130,46 @@ export default function StatsPage() {
           }
         });
 
-        const dailyData: DailyWordCount[] = Array.from(dailyMap.entries())
-          .map(([date, data]) => ({
+        // 날짜 범위 계산 (필터링된 기간 기준)
+        let startDate: Date;
+        let endDate: Date = new Date();
+        
+        if (timeRange === "week") {
+          startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+        } else if (timeRange === "month") {
+          startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+        } else {
+          // 전체 기간: 일기 데이터에서 최소/최대 날짜 찾기
+          if (filteredDiaries.length > 0) {
+            const dates = filteredDiaries.map(d => new Date(d.createdAt));
+            startDate = new Date(Math.min(...dates.map(d => d.getTime())));
+            endDate = new Date(Math.max(...dates.map(d => d.getTime())));
+          } else {
+            startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+          }
+        }
+
+        // 모든 날짜를 포함한 배열 생성 (빈 날짜는 0으로 채움)
+        const allDates: string[] = [];
+        const currentDate = new Date(startDate);
+        currentDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        
+        while (currentDate <= endDate) {
+          const dateStr = currentDate.toISOString().split("T")[0];
+          allDates.push(dateStr);
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        // 모든 날짜에 대해 데이터 생성 (없는 날짜는 0으로)
+        const dailyData: DailyWordCount[] = allDates.map((date) => {
+          const existing = dailyMap.get(date);
+          return {
             date,
-            wordCount: data.wordCount,
-            entryCount: data.entryCount,
-          }))
-          .sort((a, b) => a.date.localeCompare(b.date)); // 날짜 오름차순 정렬
+            wordCount: existing?.wordCount || 0,
+            entryCount: existing?.entryCount || 0,
+          };
+        });
 
         setDailyWordCounts(dailyData);
 
@@ -205,29 +245,41 @@ export default function StatsPage() {
   }, [user, timeRange, currentAccountType]); // currentAccountType 추가
 
   // 월별 리포트 생성
-  const generateMonthlyReport = async () => {
+  const generateMonthlyReport = async (forceRegenerate: boolean = false) => {
+    const MIN_DIARIES_REQUIRED = 10;
+    
     if (!diaries || diaries.length === 0) {
-      alert("리포트를 생성하려면 최소 1개 이상의 일기/작문이 필요합니다.");
+      alert(`월말 보고서를 생성하려면 최소 ${MIN_DIARIES_REQUIRED}개 이상의 일기/작문이 필요합니다.`);
+      return;
+    }
+
+    // 최근 30일 데이터 필터링
+    const now = new Date();
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const monthDiaries = diaries.filter((d) => {
+      const diaryDate = new Date(d.createdAt);
+      return diaryDate >= monthAgo;
+    });
+
+    if (monthDiaries.length === 0) {
+      alert("최근 30일 내 작성된 일기/작문이 없습니다.");
+      return;
+    }
+
+    // 최소 일기 수 체크 (최근 30일 기준)
+    if (monthDiaries.length < MIN_DIARIES_REQUIRED) {
+      alert(
+        `월말 보고서를 생성하려면 최근 30일 내에 최소 ${MIN_DIARIES_REQUIRED}개 이상의 일기/작문이 필요합니다.\n\n` +
+        `현재: ${monthDiaries.length}개\n` +
+        `필요: ${MIN_DIARIES_REQUIRED}개 이상\n\n` +
+        `더 많은 일기를 작성한 후 다시 시도해주세요! 💪`
+      );
       return;
     }
 
     setReportLoading(true);
     try {
-      console.log("📊 월별 리포트 생성 중...");
-      
-      // 최근 30일 데이터 필터링
-      const now = new Date();
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const monthDiaries = diaries.filter((d) => {
-        const diaryDate = new Date(d.createdAt);
-        return diaryDate >= monthAgo;
-      });
-
-      if (monthDiaries.length === 0) {
-        alert("최근 30일 내 작성된 일기/작문이 없습니다.");
-        setReportLoading(false);
-        return;
-      }
+      console.log("📊 월별 리포트 생성 중...", forceRegenerate ? "(강제 재생성)" : "");
 
       const response = await fetch("/api/monthly-report", {
         method: "POST",
@@ -237,17 +289,40 @@ export default function StatsPage() {
         body: JSON.stringify({
           diaries: monthDiaries,
           accountType: currentAccountType,
+          forceRegenerate,
+          userId: user?.uid,
         }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        console.log("✅ 월별 리포트 생성 완료");
+        console.log("✅ 월별 리포트 생성 완료", data.cached ? "(캐시)" : "(새로 생성)");
         setMonthlyReport(data.data);
+        setReportCached(data.cached || false);
         setShowReportModal(true);
       } else {
-        alert(data.error || "리포트 생성 중 오류가 발생했습니다.");
+        // 구독 필요 에러
+        if (data.requiresSubscription) {
+          const confirmUpgrade = confirm(
+            "🔒 월별 리포트는 유료 구독 후 이용 가능합니다.\n\n" +
+            "구독 페이지로 이동하시겠습니까?"
+          );
+          if (confirmUpgrade) {
+            router.push("/pricing");
+          }
+        }
+        // 최소 일기 수 부족 에러는 더 친절한 메시지로 표시
+        else if (data.minRequired && data.currentCount !== undefined) {
+          alert(
+            `월말 보고서를 생성하려면 최소 ${data.minRequired}개 이상의 일기/작문이 필요합니다.\n\n` +
+            `현재: ${data.currentCount}개\n` +
+            `필요: ${data.minRequired}개 이상\n\n` +
+            `더 많은 일기를 작성한 후 다시 시도해주세요! 💪`
+          );
+        } else {
+          alert(data.error || "리포트 생성 중 오류가 발생했습니다.");
+        }
       }
     } catch (error) {
       console.error("❌ 리포트 생성 오류:", error);
@@ -335,28 +410,51 @@ export default function StatsPage() {
                     ))}
                   </div>
                   
-                  <motion.button
-                    onClick={generateMonthlyReport}
-                    disabled={reportLoading}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`px-6 py-3 rounded-lg font-bold shadow-lg transition-all ${
-                      reportLoading
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-xl"
-                    }`}
-                  >
-                    {reportLoading ? (
-                      <span className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        생성 중...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        🤖 월별 성장 리포트 생성
-                      </span>
-                    )}
-                  </motion.button>
+                  {(() => {
+                    // 최근 30일 일기 수 계산
+                    const now = new Date();
+                    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    const monthDiaries = diaries.filter((d) => {
+                      const diaryDate = new Date(d.createdAt);
+                      return diaryDate >= monthAgo;
+                    });
+                    const MIN_DIARIES_REQUIRED = 10;
+                    const hasEnoughDiaries = monthDiaries.length >= MIN_DIARIES_REQUIRED;
+                    
+                    return (
+                      <div className="flex flex-col items-end gap-2">
+                        <motion.button
+                          onClick={() => generateMonthlyReport(false)}
+                          disabled={reportLoading || !hasEnoughDiaries}
+                          whileHover={hasEnoughDiaries ? { scale: 1.05 } : {}}
+                          whileTap={hasEnoughDiaries ? { scale: 0.95 } : {}}
+                          className={`px-6 py-3 rounded-lg font-bold shadow-lg transition-all ${
+                            reportLoading || !hasEnoughDiaries
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-xl"
+                          }`}
+                        >
+                          {reportLoading ? (
+                            <span className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              생성 중...
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-2">
+                              🤖 월별 성장 리포트 생성
+                            </span>
+                          )}
+                        </motion.button>
+                        {!hasEnoughDiaries && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 text-right max-w-xs">
+                            💡 월말 보고서를 생성하려면 최소 {MIN_DIARIES_REQUIRED}개 이상의 일기가 필요합니다.
+                            <br />
+                            현재: {monthDiaries.length}개 / 필요: {MIN_DIARIES_REQUIRED}개
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -481,7 +579,7 @@ export default function StatsPage() {
                             {/* 툴팁 */}
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                               <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
-                                <div className="font-bold">{new Date(day.date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}</div>
+                                <div className="font-bold">{new Date(day.date + "T00:00:00").toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}</div>
                                 <div>단어: {day.wordCount}개</div>
                                 <div>일기: {day.entryCount}개</div>
                               </div>
@@ -550,20 +648,31 @@ export default function StatsPage() {
                   
                   {/* X축 레이블 (날짜) */}
                   <div className="flex justify-between mt-4 text-xs text-gray-600 dark:text-gray-400">
-                    <span>
-                      {dailyWordCounts.length > 0 &&
-                        new Date(dailyWordCounts[0].date).toLocaleDateString("ko-KR", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                    </span>
-                    <span>
-                      {dailyWordCounts.length > 0 &&
-                        new Date(dailyWordCounts[dailyWordCounts.length - 1].date).toLocaleDateString("ko-KR", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                    </span>
+                    {dailyWordCounts.length > 0 && (
+                      <>
+                        <span>
+                          {new Date(dailyWordCounts[0].date + "T00:00:00").toLocaleDateString("ko-KR", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                        {dailyWordCounts.length > 1 && dailyWordCounts.length <= 7 && (
+                          // 7일 이하일 때는 중간 날짜도 표시
+                          <span>
+                            {new Date(dailyWordCounts[Math.floor(dailyWordCounts.length / 2)].date + "T00:00:00").toLocaleDateString("ko-KR", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
+                        )}
+                        <span>
+                          {new Date(dailyWordCounts[dailyWordCounts.length - 1].date + "T00:00:00").toLocaleDateString("ko-KR", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                      </>
+                    )}
                   </div>
                   
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-4 text-center">
@@ -632,21 +741,47 @@ export default function StatsPage() {
                 {/* 헤더 */}
                 <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-t-2xl">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-2">🤖 월별 성장 리포트</h2>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h2 className="text-2xl font-bold">🤖 월별 성장 리포트</h2>
+                        {reportCached && (
+                          <span className="bg-white/20 text-xs px-2 py-1 rounded-full">
+                            💾 캐시됨
+                          </span>
+                        )}
+                      </div>
                       <p className="text-purple-100 text-sm">
                         {new Date(monthlyReport.period.start).toLocaleDateString("ko-KR")} ~{" "}
                         {new Date(monthlyReport.period.end).toLocaleDateString("ko-KR")}
                       </p>
+                      {reportCached && (
+                        <p className="text-purple-200 text-xs mt-1">
+                          생성 시간: {new Date(monthlyReport.createdAt).toLocaleString("ko-KR")}
+                        </p>
+                      )}
                     </div>
-                    <button
-                      onClick={() => setShowReportModal(false)}
-                      className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {reportCached && (
+                        <button
+                          onClick={() => {
+                            setShowReportModal(false);
+                            setTimeout(() => generateMonthlyReport(true), 300);
+                          }}
+                          className="bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
+                          title="강제 재생성 (토큰 사용)"
+                        >
+                          🔄 재생성
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowReportModal(false)}
+                        className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -756,6 +891,139 @@ export default function StatsPage() {
                       ))}
                     </ul>
                   </div>
+
+                  {/* 자주 사용하는 단어 TOP 10 */}
+                  {monthlyReport.topWords && monthlyReport.topWords.length > 0 && (
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-6 border-2 border-indigo-200 dark:border-indigo-800">
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                        <span>📚</span>
+                        <span>자주 사용하는 단어 TOP 10</span>
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        {monthlyReport.topWords.slice(0, 10).map((word, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.05 }}
+                            className="bg-white dark:bg-gray-700 rounded-lg p-3 text-center shadow-sm"
+                          >
+                            <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                              {word.word}
+                            </div>
+                            {word.meaning && (
+                              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                {word.meaning}
+                              </div>
+                            )}
+                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                              {word.count}회
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 잘 쓰는 표현 예시 */}
+                  {monthlyReport.goodExpressions && monthlyReport.goodExpressions.length > 0 && (
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-6 border-2 border-green-200 dark:border-green-800">
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                        <span>⭐</span>
+                        <span>잘 쓰는 표현 예시</span>
+                      </h3>
+                      <div className="space-y-4">
+                        {monthlyReport.goodExpressions.map((expr, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm"
+                          >
+                            <div className="font-semibold text-green-700 dark:text-green-400 mb-2">
+                              "{expr.expression}"
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400 italic mb-2">
+                              예시: {expr.example}
+                            </div>
+                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                              {expr.explanation}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 새로 시도한 문법 구조 */}
+                  {monthlyReport.newGrammar && monthlyReport.newGrammar.length > 0 && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border-2 border-blue-200 dark:border-blue-800">
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                        <span>🚀</span>
+                        <span>새로 시도한 문법 구조</span>
+                      </h3>
+                      <div className="space-y-4">
+                        {monthlyReport.newGrammar.map((grammar, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm"
+                          >
+                            <div className="font-semibold text-blue-700 dark:text-blue-400 mb-2">
+                              {grammar.grammar}
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400 italic mb-2">
+                              예시: {grammar.example}
+                            </div>
+                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                              {grammar.explanation}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 자주 틀리는 문법 패턴 및 개선 팁 */}
+                  {monthlyReport.commonMistakes && monthlyReport.commonMistakes.length > 0 && (
+                    <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-6 border-2 border-red-200 dark:border-red-800">
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                        <span>💪</span>
+                        <span>자주 틀리는 문법 패턴 및 개선 팁</span>
+                      </h3>
+                      <div className="space-y-4">
+                        {monthlyReport.commonMistakes.map((mistake, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm"
+                          >
+                            <div className="flex items-start gap-3 mb-2">
+                              <span className="text-red-600 dark:text-red-400 font-bold">
+                                {mistake.frequency}회
+                              </span>
+                              <div className="flex-1">
+                                <div className="text-sm text-gray-500 dark:text-gray-400 line-through mb-1">
+                                  ❌ {mistake.mistake}
+                                </div>
+                                <div className="text-sm font-semibold text-green-700 dark:text-green-400">
+                                  ✅ {mistake.correct}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-sm text-gray-700 dark:text-gray-300 bg-yellow-50 dark:bg-yellow-900/20 rounded p-2 mt-2">
+                              💡 {mistake.tip}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* 닫기 버튼 */}
                   <button

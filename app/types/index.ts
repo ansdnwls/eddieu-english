@@ -312,6 +312,28 @@ export interface MonthlyReport {
   };
   insights: string; // GPT가 생성한 분석 텍스트
   recommendations: string[]; // 추천 사항 배열
+  // GPT가 분석한 상세 섹션들
+  topWords?: {
+    word: string;
+    count: number;
+    meaning?: string;
+  }[]; // 자주 사용하는 단어 TOP 10
+  goodExpressions?: {
+    expression: string;
+    example: string;
+    explanation: string;
+  }[]; // 잘 쓰는 표현 예시
+  newGrammar?: {
+    grammar: string;
+    example: string;
+    explanation: string;
+  }[]; // 새로 시도한 문법 구조
+  commonMistakes?: {
+    mistake: string;
+    correct: string;
+    frequency: number;
+    tip: string;
+  }[]; // 자주 틀리는 문법 패턴 및 개선 팁
   createdAt: string;
 }
 

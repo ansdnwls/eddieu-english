@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import { checkUserSubscription, SubscriptionStatus } from "@/lib/subscription/checkSubscription";
 
 interface CorrectionResultProps {
   result: CorrectionResultType;
@@ -157,8 +158,28 @@ export default function CorrectionResult({ result }: CorrectionResultProps) {
     return texts[contentType][key] || texts.diary[key];
   };
 
+  // 구독 상태 확인
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
+  
+  useEffect(() => {
+    if (user) {
+      checkUserSubscription(user.uid).then(setSubscriptionStatus);
+    }
+  }, [user]);
+
   // GPT 대화 프롬프트 복사
   const handleCopyGPTPrompt = () => {
+    // 구독 체크
+    if (!subscriptionStatus?.isActive) {
+      const confirmUpgrade = confirm(
+        "🔒 GPT 대화하기 기능은 유료 구독 후 이용 가능합니다.\n\n" +
+        "구독 페이지로 이동하시겠습니까?"
+      );
+      if (confirmUpgrade) {
+        window.location.href = "/pricing";
+      }
+      return;
+    }
     const childName = childInfo?.childName || "학생";
     const childAge = childInfo?.age || 8;
     

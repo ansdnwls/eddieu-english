@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DiaryEntry, MonthlyReport } from "@/app/types";
 import { maskSensitiveInfo } from "@/app/utils/apiLogger";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs, addDoc, doc, getDoc, setDoc } from "firebase/firestore";
+import { checkUserSubscriptionServer } from "@/lib/subscription/checkSubscription";
 
 // API 키 가져오기 (환경변수만 사용)
 function getAPIKeys() {
@@ -54,6 +57,46 @@ async function generateReportWithGPT(
     corrections: d.corrections.length,
   }));
 
+  // 데이터 분석: 자주 사용하는 단어 빈도 계산
+  const wordFrequency: Record<string, number> = {};
+  diaries.forEach((diary) => {
+    diary.extractedWords?.forEach((word) => {
+      const wordKey = word.word.toLowerCase().trim();
+      if (wordKey && wordKey.length > 0) {
+        wordFrequency[wordKey] = (wordFrequency[wordKey] || 0) + 1;
+      }
+    });
+  });
+  const topWordsData = Object.entries(wordFrequency)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20) // GPT에게 전달할 때는 20개까지
+    .map(([word, count]) => ({ word, count }));
+
+  // 데이터 분석: 교정 내역 수집 (문법 패턴 분석용)
+  const allCorrections = diaries.flatMap((diary) => 
+    diary.corrections.map((correction, index) => ({
+      original: correction.original,
+      corrected: correction.corrected,
+      explanation: correction.explanation,
+      date: diary.createdAt,
+      order: index,
+    }))
+  );
+
+  // 데이터 분석: 시간순으로 정렬된 일기 (새로 시도한 문법 찾기용)
+  const sortedDiaries = [...diaries].sort((a, b) => 
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+  
+  // 전반부와 후반부의 교정 패턴 비교
+  const firstHalfCorrections = sortedDiaries.slice(0, Math.floor(sortedDiaries.length / 2))
+    .flatMap((d) => d.corrections);
+  const secondHalfCorrections = sortedDiaries.slice(Math.floor(sortedDiaries.length / 2))
+    .flatMap((d) => d.corrections);
+
+  // 잘 쓰는 표현 추출을 위한 원문 샘플
+  const originalTexts = diaries.map((d) => d.originalText).join("\n---\n");
+
   // GPT 프롬프트
   const systemPrompt = accountType === "child" 
     ? `당신은 어린이 영어 학습 전문가입니다. 한 달간의 영어 일기 데이터를 분석하여 성장 리포트를 작성해주세요.
@@ -82,6 +125,32 @@ async function generateReportWithGPT(
     "과거형 동사 연습을 더 해보면 좋겠어요",
     "감정 표현 단어를 다양하게 써보세요",
     "주말에 있었던 일을 자세히 써보는 연습을 해보세요"
+  ],
+  "topWords": [
+    {"word": "happy", "count": 15, "meaning": "행복한"},
+    {"word": "went", "count": 12, "meaning": "갔다"}
+  ],
+  "goodExpressions": [
+    {
+      "expression": "I was so excited",
+      "example": "I was so excited to go to the park.",
+      "explanation": "감정을 잘 표현한 문장이에요!"
+    }
+  ],
+  "newGrammar": [
+    {
+      "grammar": "과거형 동사",
+      "example": "I went to school yesterday.",
+      "explanation": "이번 달에 과거형을 처음 시도했어요!"
+    }
+  ],
+  "commonMistakes": [
+    {
+      "mistake": "I go to school yesterday",
+      "correct": "I went to school yesterday",
+      "frequency": 5,
+      "tip": "과거 일을 말할 때는 동사에 -ed를 붙이거나 불규칙 동사를 사용해요!"
+    }
   ]
 }`
     : `당신은 성인 영어 학습 전문가입니다. 한 달간의 영어 작문 데이터를 분석하여 성장 리포트를 작성해주세요.
@@ -110,6 +179,32 @@ async function generateReportWithGPT(
     "비즈니스 이메일 표현 연습을 추천합니다",
     "접속사를 활용한 문장 연결 연습이 도움이 될 것입니다",
     "원어민이 자주 쓰는 관용 표현을 학습해보세요"
+  ],
+  "topWords": [
+    {"word": "however", "count": 20, "meaning": "그러나"},
+    {"word": "therefore", "count": 15, "meaning": "따라서"}
+  ],
+  "goodExpressions": [
+    {
+      "expression": "In conclusion",
+      "example": "In conclusion, I believe that...",
+      "explanation": "논리적인 결론 도입부로 잘 사용하셨습니다."
+    }
+  ],
+  "newGrammar": [
+    {
+      "grammar": "복합문 (Complex Sentences)",
+      "example": "Although it was raining, I went outside.",
+      "explanation": "이번 달에 접속사를 활용한 복합문을 처음 시도하셨습니다."
+    }
+  ],
+  "commonMistakes": [
+    {
+      "mistake": "I am interesting in",
+      "correct": "I am interested in",
+      "frequency": 8,
+      "tip": "interested는 '관심 있는'이라는 의미로 사람이 주어일 때 사용하고, interesting은 '흥미로운'이라는 의미로 사물이 주어일 때 사용합니다."
+    }
   ]
 }`;
 
@@ -124,7 +219,31 @@ async function generateReportWithGPT(
 [샘플 작문 데이터]
 ${JSON.stringify(sampleDiaries, null, 2)}
 
-위 데이터를 바탕으로 성장 리포트를 JSON 형식으로 작성해주세요.`;
+[자주 사용하는 단어 빈도 (상위 20개)]
+${JSON.stringify(topWordsData, null, 2)}
+
+[전체 교정 내역]
+총 ${allCorrections.length}개의 교정이 있었습니다.
+전반부 교정 수: ${firstHalfCorrections.length}개
+후반부 교정 수: ${secondHalfCorrections.length}개
+${allCorrections.length > 0 ? `\n교정 샘플 (최대 10개):\n${JSON.stringify(allCorrections.slice(0, 10).map(c => ({
+  original: c.original.substring(0, 50),
+  corrected: c.corrected.substring(0, 50),
+  explanation: c.explanation.substring(0, 100)
+})), null, 2)}` : ''}
+
+[원문 텍스트 샘플 (잘 쓰는 표현 찾기용)]
+${originalTexts.substring(0, 2000)}...
+
+위 데이터를 바탕으로 성장 리포트를 JSON 형식으로 작성해주세요.
+
+**중요 지침:**
+1. **topWords**: 자주 사용하는 단어 TOP 10을 빈도순으로 정렬하고, 각 단어의 의미를 추가해주세요.
+2. **goodExpressions**: 원문에서 잘 쓰인 표현 3-5개를 찾아서 예시와 설명을 함께 제공해주세요.
+3. **newGrammar**: 전반부에는 없었지만 후반부에 새로 시도한 문법 구조를 찾아주세요. (최대 3개)
+4. **commonMistakes**: 자주 반복되는 문법 실수를 빈도순으로 정렬하고, 개선 팁을 제공해주세요. (최대 5개)
+
+모든 분석은 ${accountType === "child" ? "어린이에게 따뜻하고 격려하는 톤으로" : "성인에게 전문적이고 객관적인 톤으로"} 작성해주세요.`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -140,7 +259,7 @@ ${JSON.stringify(sampleDiaries, null, 2)}
           { role: "user", content: userPrompt },
         ],
         temperature: 0.7,
-        max_tokens: 1500,
+        max_tokens: 3000, // 새로운 섹션들을 위해 토큰 수 증가
       }),
     });
 
@@ -178,6 +297,10 @@ ${JSON.stringify(sampleDiaries, null, 2)}
           "새로운 단어를 적극적으로 사용해보세요",
           "매일 조금씩이라도 꾸준히 작성하는 것이 중요해요",
         ],
+        topWords: topWordsData.slice(0, 10).map((w) => ({ word: w.word, count: w.count })),
+        goodExpressions: [],
+        newGrammar: [],
+        commonMistakes: [],
       };
     }
 
@@ -205,6 +328,10 @@ ${JSON.stringify(sampleDiaries, null, 2)}
       },
       insights: analysisResult.insights || "",
       recommendations: analysisResult.recommendations || [],
+      topWords: analysisResult.topWords?.slice(0, 10) || topWordsData.slice(0, 10).map((w) => ({ word: w.word, count: w.count })),
+      goodExpressions: analysisResult.goodExpressions || [],
+      newGrammar: analysisResult.newGrammar || [],
+      commonMistakes: analysisResult.commonMistakes || [],
       createdAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -247,8 +374,65 @@ ${JSON.stringify(sampleDiaries, null, 2)}
             "접속사(however, therefore, moreover)를 활용한 문장 연결 연습을 추천합니다",
             "원어민이 자주 쓰는 관용 표현(idioms)을 익혀보세요",
           ],
+      topWords: topWordsData.slice(0, 10).map((w) => ({ word: w.word, count: w.count })),
+      goodExpressions: [],
+      newGrammar: [],
+      commonMistakes: [],
       createdAt: new Date().toISOString(),
     };
+  }
+}
+
+// 기간별 고유 키 생성 (캐싱용)
+function generatePeriodKey(userId: string, accountType: string, periodStart: string, periodEnd: string): string {
+  const startDate = new Date(periodStart).toISOString().split('T')[0]; // YYYY-MM-DD
+  const endDate = new Date(periodEnd).toISOString().split('T')[0];
+  return `${userId}_${accountType}_${startDate}_${endDate}`;
+}
+
+// Firestore에서 기존 리포트 조회
+async function getCachedReport(periodKey: string): Promise<MonthlyReport | null> {
+  if (!db) {
+    console.warn("⚠️ Firestore가 초기화되지 않음 - 캐시 확인 불가");
+    return null;
+  }
+
+  try {
+    const reportRef = doc(db, "monthlyReports", periodKey);
+    const reportDoc = await getDoc(reportRef);
+    
+    if (reportDoc.exists()) {
+      const data = reportDoc.data();
+      const report = data as MonthlyReport;
+      console.log("✅ 캐시된 리포트 발견:", periodKey);
+      return report;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("❌ 캐시 조회 오류:", error);
+    return null;
+  }
+}
+
+// Firestore에 리포트 저장
+async function saveReportToCache(periodKey: string, report: MonthlyReport): Promise<void> {
+  if (!db) {
+    console.warn("⚠️ Firestore가 초기화되지 않음 - 리포트 저장 불가");
+    return;
+  }
+
+  try {
+    const reportRef = doc(db, "monthlyReports", periodKey);
+    await setDoc(reportRef, {
+      ...report,
+      periodKey, // 검색용
+      cachedAt: new Date().toISOString(),
+    }, { merge: true });
+    console.log("✅ 리포트 캐시 저장 완료:", periodKey);
+  } catch (error) {
+    console.error("❌ 리포트 저장 오류:", error);
+    // 저장 실패해도 리포트는 반환
   }
 }
 
@@ -257,7 +441,7 @@ export async function POST(request: NextRequest) {
     console.log("📊 월별 리포트 생성 API 호출");
 
     const body = await request.json();
-    const { diaries, accountType } = body;
+    const { diaries, accountType, forceRegenerate, userId } = body;
 
     if (!diaries || !Array.isArray(diaries) || diaries.length === 0) {
       return NextResponse.json(
@@ -271,6 +455,73 @@ export async function POST(request: NextRequest) {
         { success: false, error: "계정 타입이 필요합니다." },
         { status: 400 }
       );
+    }
+
+    // 구독 체크 (유료 기능)
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "사용자 정보가 필요합니다." },
+        { status: 400 }
+      );
+    }
+
+    const subscription = await checkUserSubscriptionServer(userId);
+    if (!subscription.isActive) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: "월별 리포트는 유료 구독 후 이용 가능합니다. /pricing 페이지에서 구독해주세요.",
+          requiresSubscription: true 
+        },
+        { status: 403 }
+      );
+    }
+
+    // 최소 일기 수 제한 (10개 이상)
+    const MIN_DIARIES_REQUIRED = 10;
+    if (diaries.length < MIN_DIARIES_REQUIRED) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `월말 보고서를 생성하려면 최소 ${MIN_DIARIES_REQUIRED}개 이상의 일기/작문이 필요합니다. 현재 ${diaries.length}개입니다.`,
+          minRequired: MIN_DIARIES_REQUIRED,
+          currentCount: diaries.length,
+        },
+        { status: 400 }
+      );
+    }
+
+    // 기간 계산
+    const now = new Date();
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const periodKey = generatePeriodKey(
+      diaries[0]?.userId || "unknown",
+      accountType,
+      monthAgo.toISOString(),
+      now.toISOString()
+    );
+
+    // 강제 재생성이 아니면 캐시 확인
+    if (!forceRegenerate) {
+      const cachedReport = await getCachedReport(periodKey);
+      if (cachedReport) {
+        // 캐시된 리포트가 1시간 이내에 생성된 것이면 재사용
+        const cacheAge = new Date().getTime() - new Date(cachedReport.createdAt).getTime();
+        const oneHour = 60 * 60 * 1000;
+        
+        if (cacheAge < oneHour) {
+          console.log("✅ 최근 생성된 리포트 재사용 (캐시)");
+          return NextResponse.json({
+            success: true,
+            data: cachedReport,
+            cached: true,
+          });
+        } else {
+          console.log("⚠️ 캐시가 오래됨 (1시간 이상) - 재생성 가능");
+        }
+      }
+    } else {
+      console.log("🔄 강제 재생성 요청");
     }
 
     // API 키 가져오기 및 검증
@@ -297,6 +548,12 @@ export async function POST(request: NextRequest) {
         accountType,
         openaiKey
       );
+      
+      // 생성된 리포트를 캐시에 저장 (비동기, 실패해도 응답에는 영향 없음)
+      saveReportToCache(periodKey, report).catch((error) => {
+        console.warn("⚠️ 리포트 캐시 저장 실패 (무시됨):", error);
+      });
+      
     } catch (gptError: unknown) {
       const error = gptError as Error;
       const errorMessage = error.message || "알 수 없는 오류가 발생했습니다.";
@@ -324,6 +581,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: report,
+      cached: false,
     });
   } catch (error: unknown) {
     const err = error as Error;

@@ -70,6 +70,17 @@ export default function PricingPage() {
             orderId: "plan_free",
             isActive: true,
           };
+          
+          // 유료 플랜 예시 (관리자 페이지에서 설정 가능):
+          // features: [
+          //   "일기 첨삭 무제한",
+          //   "TTS 음성 듣기 (원어민 발음)",
+          //   "발음 녹음 연습",
+          //   "GPT 대화하기",
+          //   "월별 성장 리포트",
+          //   "상세 분석 리포트",
+          //   "단어장 무제한",
+          // ]
           setPlans([freePlan, ...plansList]);
         } else {
           setPlans(plansList);
@@ -100,6 +111,15 @@ export default function PricingPage() {
             isActive: true,
           },
         ]);
+        
+        // 참고: 유료 플랜은 관리자 페이지(/admin/pricing)에서 설정하세요.
+        // 유료 플랜 features 예시:
+        // - 일기 첨삭 무제한
+        // - TTS 음성 듣기 (원어민 발음)
+        // - 발음 녹음 연습
+        // - GPT 대화하기
+        // - 월별 성장 리포트
+        // - 상세 분석 리포트
         setLoading(false);
       }
     );
