@@ -59,6 +59,7 @@ export function calculateDiaryStats(originalText: string, corrections: Correctio
  */
 export interface SaveDiaryParams {
   userId: string;
+  childId?: string; // 아이 ID (다중 아이 지원)
   originalText: string;
   correctionData: CorrectionResult;
   englishLevel: EnglishLevel;
@@ -70,7 +71,7 @@ export interface SaveDiaryParams {
  * Firebase 초기화가 안 된 경우도 안전하게 처리
  */
 export async function saveDiary(params: SaveDiaryParams): Promise<void> {
-  const { userId, originalText, correctionData, englishLevel, accountType } = params;
+  const { userId, childId, originalText, correctionData, englishLevel, accountType } = params;
 
   // Firebase 초기화 확인
   if (!db) {
@@ -85,6 +86,7 @@ export async function saveDiary(params: SaveDiaryParams): Promise<void> {
 
     const diaryEntry = {
       userId,
+      childId: childId || null, // 아이 ID 추가 (부모 모드는 null)
       originalText,
       correctedText: correctionData.correctedText,
       feedback: correctionData.feedback,
@@ -100,7 +102,7 @@ export async function saveDiary(params: SaveDiaryParams): Promise<void> {
     };
 
     await addDoc(collection(firestoreDb, "diaries"), diaryEntry);
-    console.log("✅ 일기가 저장되었습니다!");
+    console.log("✅ 일기가 저장되었습니다! (childId:", childId || "부모", ")");
   } catch (error) {
     const err = error as Error;
     console.error("❌ 일기 저장 중 오류:", err);

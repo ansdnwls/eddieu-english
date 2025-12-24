@@ -298,7 +298,7 @@ export default function AdminDashboard() {
   // 카드 데이터 정의
   const cards = [
     { title: "금일신규", value: stats.todayNewUsers, color: "blue", link: "/admin/users" },
-    { title: "탈퇴", value: stats.todayWithdrawals, color: "red", link: "/admin/users" },
+    { title: "탈퇴", value: stats.todayWithdrawals, color: "red", link: "/admin/withdrawal" },
     { title: "Q&A", value: stats.unreadQnA, color: "yellow", badge: true, link: "/board?category=qna" },
     { title: "광고문의", value: stats.unreadAds, color: "purple", badge: true, link: "/board?category=advertisement" },
     

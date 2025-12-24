@@ -32,10 +32,68 @@ export default function ContentPage() {
           limit(200) // 날짜 필터링을 위해 더 많이 가져오기
         );
         const snapshot = await getDocs(q);
-        const diaryList = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const diaryList = await Promise.all(
+          snapshot.docs.map(async (doc) => {
+            const data = doc.data();
+            const accountType = data.accountType || "child"; // 기본값은 child
+            const userId = data.userId;
+            const childId = data.childId;
+            
+            let displayName = "이름 없음";
+            
+            try {
+              if (accountType === "parent") {
+                // 부모 계정인 경우 parents 컬렉션에서 parentName 가져오기
+                const parentRef = doc(db, "parents", userId);
+                const parentSnap = await getDoc(parentRef);
+                if (parentSnap.exists()) {
+                  const parentData = parentSnap.data();
+                  displayName = parentData.parentName || parentData.name || "이름 없음";
+                }
+              } else {
+                // 아이 계정인 경우 children 컬렉션에서 childName 가져오기
+                if (childId && userId) {
+                  // childId가 있는 경우: userId_childId 형식으로 조회
+                  const childRef = doc(db, "children", `${userId}_${childId}`);
+                  const childSnap = await getDoc(childRef);
+                  if (childSnap.exists()) {
+                    const childData = childSnap.data();
+                    displayName = childData.childName || childData.name || "이름 없음";
+                  }
+                } else if (userId) {
+                  // childId가 없는 경우: userId만으로 조회 시도 (하위 호환성)
+                  // children 컬렉션에서 parentId가 userId인 첫 번째 아이 찾기
+                  const childrenQuery = query(
+                    collection(db, "children"),
+                    where("parentId", "==", userId)
+                  );
+                  const childrenSnapshot = await getDocs(childrenQuery);
+                  if (!childrenSnapshot.empty) {
+                    const firstChild = childrenSnapshot.docs[0].data();
+                    displayName = firstChild.childName || firstChild.name || "이름 없음";
+                  } else {
+                    // children 컬렉션에 없으면 userId를 직접 문서 ID로 시도
+                    const childRef = doc(db, "children", userId);
+                    const childSnap = await getDoc(childRef);
+                    if (childSnap.exists()) {
+                      const childData = childSnap.data();
+                      displayName = childData.childName || childData.name || "이름 없음";
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.warn("사용자 정보 로드 실패:", error);
+            }
+            
+            return {
+              id: doc.id,
+              ...data,
+              displayName, // 표시할 이름 (childName 또는 parentName)
+              accountType, // 계정 타입 명시적으로 포함
+            };
+          })
+        );
         setDiaries(diaryList);
       } catch (error) {
         console.error("Error loading diaries:", error);
@@ -153,20 +211,48 @@ export default function ContentPage() {
       await addDoc(collection(db, `users/${userId}/badges`), badgeData);
 
       // 3. 알림 생성 (부모가 로그인할 때 볼 수 있도록)
-      const childRef = doc(db, "children", userId);
-      const childSnap = await getDoc(childRef);
-      let childName = "아이";
-      if (childSnap.exists()) {
-        const childData = childSnap.data();
-        // childName 필드 우선, 없으면 name 필드
-        childName = childData.childName || childData.name || "아이";
+      const accountType = diary.accountType || "child";
+      const childId = diary.childId;
+      let userName = "사용자";
+      
+      try {
+        if (accountType === "parent") {
+          const parentRef = doc(db, "parents", userId);
+          const parentSnap = await getDoc(parentRef);
+          if (parentSnap.exists()) {
+            const parentData = parentSnap.data();
+            userName = parentData.parentName || parentData.name || "사용자";
+          }
+        } else {
+          // 아이 계정
+          if (childId && userId) {
+            const childRef = doc(db, "children", `${userId}_${childId}`);
+            const childSnap = await getDoc(childRef);
+            if (childSnap.exists()) {
+              const childData = childSnap.data();
+              userName = childData.childName || childData.name || "아이";
+            }
+          } else {
+            // 하위 호환성: userId만으로 조회
+            const childRef = doc(db, "children", userId);
+            const childSnap = await getDoc(childRef);
+            if (childSnap.exists()) {
+              const childData = childSnap.data();
+              userName = childData.childName || childData.name || "아이";
+            }
+          }
+        }
+      } catch (error) {
+        console.warn("사용자 정보 로드 실패:", error);
       }
 
       const notificationData = {
         userId: userId,
         type: "badge_awarded",
         title: "🎉 오늘의 일기 배지 수상!",
-        message: `${childName}가 오늘의 일기 배지를 받았어요! 아이에게 큰 격려를 해주세요!`,
+        message: accountType === "parent" 
+          ? `${userName}님이 오늘의 일기로 선정되었습니다! 축하합니다!`
+          : `${userName}가 오늘의 일기 배지를 받았어요! 아이에게 큰 격려를 해주세요!`,
         read: false,
         createdAt: featuredAt,
         relatedDiaryId: diaryId,
@@ -183,7 +269,7 @@ export default function ContentPage() {
         )
       );
 
-      alert(`✅ ${childName}이가 오늘의 일기로 선정되었습니다!\n배지가 수여되고 알림이 전송되었습니다.`);
+      alert(`✅ ${userName}${accountType === "parent" ? "님이" : "이가"} 오늘의 일기로 선정되었습니다!\n배지가 수여되고 알림이 전송되었습니다.`);
     } catch (error) {
       console.error("Error featuring diary:", error);
       alert("오류가 발생했습니다: " + (error as Error).message);
@@ -255,16 +341,43 @@ export default function ContentPage() {
         )
       );
 
-      // 아이 이름 가져오기
-      const childRef = doc(db, "children", userId);
-      const childSnap = await getDoc(childRef);
-      let childName = "아이";
-      if (childSnap.exists()) {
-        const childData = childSnap.data();
-        childName = childData.childName || childData.name || "아이";
+      // 사용자 이름 가져오기
+      const accountType = diary.accountType || "child";
+      const childId = diary.childId;
+      let userName = "사용자";
+      
+      try {
+        if (accountType === "parent") {
+          const parentRef = doc(db, "parents", userId);
+          const parentSnap = await getDoc(parentRef);
+          if (parentSnap.exists()) {
+            const parentData = parentSnap.data();
+            userName = parentData.parentName || parentData.name || "사용자";
+          }
+        } else {
+          // 아이 계정
+          if (childId && userId) {
+            const childRef = doc(db, "children", `${userId}_${childId}`);
+            const childSnap = await getDoc(childRef);
+            if (childSnap.exists()) {
+              const childData = childSnap.data();
+              userName = childData.childName || childData.name || "아이";
+            }
+          } else {
+            // 하위 호환성: userId만으로 조회
+            const childRef = doc(db, "children", userId);
+            const childSnap = await getDoc(childRef);
+            if (childSnap.exists()) {
+              const childData = childSnap.data();
+              userName = childData.childName || childData.name || "아이";
+            }
+          }
+        }
+      } catch (error) {
+        console.warn("사용자 정보 로드 실패:", error);
       }
 
-      alert(`✅ ${childName}이의 오늘의 일기 선정이 취소되었습니다.\n배지와 알림이 삭제되었습니다.`);
+      alert(`✅ ${userName}${accountType === "parent" ? "님의" : "이의"} 오늘의 일기 선정이 취소되었습니다.\n배지와 알림이 삭제되었습니다.`);
     } catch (error) {
       console.error("Error unfeaturing diary:", error);
       alert("오류가 발생했습니다: " + (error as Error).message);
@@ -512,10 +625,20 @@ export default function ContentPage() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <span className="text-sm text-gray-500">
                       {new Date(diary.createdAt).toLocaleString("ko-KR")}
                     </span>
+                    {/* 이름 표시 (아이 또는 어른) */}
+                    {diary.displayName && diary.displayName !== "이름 없음" && (
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                        diary.accountType === "parent"
+                          ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                          : "bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400"
+                      }`}>
+                        {diary.accountType === "parent" ? "👨‍💼" : "👶"} {diary.displayName}
+                      </span>
+                    )}
                     <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-xs">
                       {diary.englishLevel || "Lv.1"}
                     </span>

@@ -23,6 +23,7 @@ export default function CompositionPage() {
   const [result, setResult] = useState<CorrectionResultType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentAccountType, setCurrentAccountType] = useState<"child" | "parent">("child");
+  const [currentChildId, setCurrentChildId] = useState<string | null>(null);
   const [inputMode, setInputMode] = useState<"photo" | "typing">("typing");
   
   // OCR 관련 상태
@@ -47,11 +48,17 @@ export default function CompositionPage() {
     }
   };
 
-  // 계정 타입 로드
+  // 계정 타입 및 아이 ID 로드
   useEffect(() => {
     const accountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
     if (accountType) {
       setCurrentAccountType(accountType);
+    }
+
+    // 현재 선택된 아이 ID 로드
+    const childId = localStorage.getItem("currentChildId");
+    if (childId) {
+      setCurrentChildId(childId);
     }
   }, []);
 
@@ -256,6 +263,7 @@ export default function CompositionPage() {
             
             const compositionData = {
               userId: user.uid,
+              childId: currentAccountType === "child" ? (currentChildId || null) : null,
               originalText: directText,
               correctedText: correctionData.correctedText,
               feedback: correctionData.feedback,
@@ -356,8 +364,14 @@ export default function CompositionPage() {
             const sentenceCount = countSentences(originalText);
             const uniqueWordsCount = countUniqueWords(originalText);
             
+            // 현재 선택된 아이 ID 가져오기
+            const currentChildId = currentAccountType === "child" 
+              ? localStorage.getItem("currentChildId") || undefined
+              : undefined;
+
             const compositionEntry = {
               userId: user.uid,
+              childId: currentChildId || null,
               originalText: originalText,
               correctedText: correctionData.correctedText,
               feedback: correctionData.feedback,
@@ -379,7 +393,7 @@ export default function CompositionPage() {
               }
             };
             
-            console.log("저장할 데이터:", compositionEntry);
+            console.log("저장할 데이터:", compositionEntry, "(childId:", currentChildId || "부모", ")");
             
             const docRef = await addDoc(collection(db, "diaries"), compositionEntry);
             console.log("✅ 작문이 저장되었습니다! 문서 ID:", docRef.id);

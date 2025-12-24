@@ -27,13 +27,57 @@ export default function VocabularyPage() {
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [childName, setChildName] = useState("");
   const [currentAccountType, setCurrentAccountType] = useState<"child" | "parent">("child");
+  const [currentChildId, setCurrentChildId] = useState<string | null>(null);
 
   useEffect(() => {
-    const accountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
-    if (accountType) {
-      setCurrentAccountType(accountType);
-    }
-  }, []);
+    const loadInitialValues = () => {
+      const accountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
+      if (accountType) {
+        setCurrentAccountType(accountType);
+      }
+      
+      const childId = localStorage.getItem("currentChildId");
+      setCurrentChildId(childId);
+    };
+
+    loadInitialValues();
+
+    // storage 이벤트 리스너 (다른 탭/창에서 변경 감지)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "currentChildId") {
+        setCurrentChildId(e.newValue);
+      }
+      if (e.key === "currentAccountType") {
+        setCurrentAccountType(e.newValue as "child" | "parent" | null);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    // 같은 탭에서의 변경 감지 (주기적 체크)
+    const interval = setInterval(() => {
+      const childId = localStorage.getItem("currentChildId");
+      const accountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
+      
+      setCurrentChildId((prev) => {
+        if (prev !== childId) {
+          console.log("🔄 currentChildId 변경 감지:", { prev, new: childId });
+          return childId;
+        }
+        return prev;
+      });
+      
+      if (accountType && accountType !== currentAccountType) {
+        console.log("🔄 accountType 변경 감지:", { prev: currentAccountType, new: accountType });
+        setCurrentAccountType(accountType);
+      }
+    }, 200); // 더 자주 체크
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [currentAccountType]);
 
   useEffect(() => {
     const loadVocabulary = async () => {
@@ -42,7 +86,15 @@ export default function VocabularyPage() {
         return;
       }
 
+      setLoading(true); // 로딩 시작
+
       try {
+        console.log("📚 단어장 로딩 시작:", {
+          userId: user.uid,
+          accountType: currentAccountType,
+          childId: currentChildId,
+        });
+
         const q = query(
           collection(db, "diaries"),
           where("userId", "==", user.uid)
@@ -50,8 +102,11 @@ export default function VocabularyPage() {
 
         const snapshot = await getDocs(q);
         const wordMap = new Map<string, VocabularyWord>();
+        let totalDiaries = 0;
+        let filteredDiaries = 0;
 
         snapshot.forEach((doc) => {
+          totalDiaries++;
           const diary = { id: doc.id, ...doc.data() } as DiaryEntry;
           
           // 계정 타입 필터링
@@ -67,6 +122,27 @@ export default function VocabularyPage() {
               return; // 이 일기는 건너뛰기
             }
           }
+          
+          // 아이 모드인 경우 childId 필터링
+          if (currentAccountType === "child" && currentChildId) {
+            const diaryChildId = diary.childId;
+            
+            // childId가 있는 일기만 필터링 (명확한 아이 구분)
+            if (diaryChildId) {
+              // 현재 선택된 아이와 일치하지 않으면 건너뛰기
+              if (diaryChildId !== currentChildId) {
+                return;
+              }
+            }
+            // childId가 없는 기존 데이터는 첫 번째 아이(child1)에게만 표시
+            else {
+              if (currentChildId !== "child1") {
+                return; // child1이 아니면 건너뛰기
+              }
+            }
+          }
+          
+          filteredDiaries++;
           
           if (diary.extractedWords && diary.extractedWords.length > 0) {
             diary.extractedWords.forEach((word) => {
@@ -99,13 +175,40 @@ export default function VocabularyPage() {
           b.count - a.count || a.word.localeCompare(b.word)
         );
 
+        console.log("✅ 단어장 로딩 완료:", {
+          총일기수: totalDiaries,
+          필터된일기수: filteredDiaries,
+          단어수: wordList.length,
+          accountType: currentAccountType,
+          childId: currentChildId,
+        });
+
         setWords(wordList);
 
         // 아이 이름 가져오기
-        if (user) {
-          const childDoc = await getDoc(doc(db, "children", user.uid));
-          if (childDoc.exists()) {
-            setChildName(childDoc.data().name || "");
+        if (user && currentAccountType === "child") {
+          if (currentChildId) {
+            // 다중 아이 지원: userId_childId 형식으로 조회
+            const childDocId = `${user.uid}_${currentChildId}`;
+            const childDoc = await getDoc(doc(db, "children", childDocId));
+            if (childDoc.exists()) {
+              const childData = childDoc.data();
+              setChildName(childData.childName || childData.name || "");
+            } else {
+              // 하위 호환성: userId만으로 조회 시도
+              const fallbackDoc = await getDoc(doc(db, "children", user.uid));
+              if (fallbackDoc.exists()) {
+                const childData = fallbackDoc.data();
+                setChildName(childData.childName || childData.name || "");
+              }
+            }
+          } else {
+            // currentChildId가 없으면 userId로 조회
+            const childDoc = await getDoc(doc(db, "children", user.uid));
+            if (childDoc.exists()) {
+              const childData = childDoc.data();
+              setChildName(childData.childName || childData.name || "");
+            }
           }
         }
       } catch (error) {
@@ -115,8 +218,9 @@ export default function VocabularyPage() {
       }
     };
 
+    console.log("🔄 useEffect 트리거:", { user: !!user, currentAccountType, currentChildId });
     loadVocabulary();
-  }, [user, currentAccountType]); // currentAccountType 추가
+  }, [user, currentAccountType, currentChildId]); // currentChildId 추가
 
   const handleDownloadVocabularyPDF = async () => {
     if (words.length === 0) {

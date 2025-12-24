@@ -19,6 +19,7 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<"all" | "month" | "week">("month");
   const [currentAccountType, setCurrentAccountType] = useState<"child" | "parent">("child");
+  const [currentChildId, setCurrentChildId] = useState<string | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [monthlyReport, setMonthlyReport] = useState<MonthlyReport | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
@@ -29,7 +30,25 @@ export default function StatsPage() {
     if (accountType) {
       setCurrentAccountType(accountType);
     }
-  }, []);
+    
+    const childId = localStorage.getItem("currentChildId");
+    setCurrentChildId(childId);
+
+    // localStorage 변화 감지
+    const interval = setInterval(() => {
+      const newChildId = localStorage.getItem("currentChildId");
+      const newAccountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
+      
+      if (newChildId !== currentChildId) {
+        setCurrentChildId(newChildId);
+      }
+      if (newAccountType && newAccountType !== accountType) {
+        setCurrentAccountType(newAccountType);
+      }
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, [currentChildId]);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -60,8 +79,6 @@ export default function StatsPage() {
           const diaryAccountType = diary.accountType;
           
           // 계정 타입 필터링
-          // 1. accountType이 없는 기존 데이터는 아이 모드에서만 표시
-          // 2. accountType이 있으면 정확히 일치하는 것만 표시
           if (diaryAccountType) {
             // accountType이 설정되어 있으면 현재 모드와 일치해야 함
             if (diaryAccountType !== currentAccountType) {
@@ -71,6 +88,24 @@ export default function StatsPage() {
             // accountType이 없는 기존 데이터는 아이 모드에서만 표시
             if (currentAccountType !== "child") {
               return false;
+            }
+          }
+          
+          // 아이 모드인 경우 childId 필터링
+          if (currentAccountType === "child" && currentChildId) {
+            const diaryChildId = diary.childId;
+            
+            // childId가 있는 일기만 필터링
+            if (diaryChildId) {
+              if (diaryChildId !== currentChildId) {
+                return false;
+              }
+            }
+            // childId가 없는 기존 데이터는 child1에게만 표시
+            else {
+              if (currentChildId !== "child1") {
+                return false;
+              }
             }
           }
           
@@ -242,7 +277,7 @@ export default function StatsPage() {
     };
 
     loadStats();
-  }, [user, timeRange, currentAccountType]); // currentAccountType 추가
+  }, [user, timeRange, currentAccountType, currentChildId]); // currentChildId 추가
 
   // 월별 리포트 생성
   const generateMonthlyReport = async (forceRegenerate: boolean = false) => {
@@ -522,164 +557,6 @@ export default function StatsPage() {
                 </motion.div>
               </div>
 
-              {/* 일자별 단어 사용 그래프 */}
-              {dailyWordCounts.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
-                >
-                  <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-6">
-                    📈 일자별 단어 사용량
-                  </h3>
-                  <div className="flex gap-4">
-                    {/* Y축 레이블 */}
-                    <div className="flex flex-col justify-between h-64 text-xs text-gray-500 dark:text-gray-400 py-1">
-                      {(() => {
-                        const maxWords = Math.max(...dailyWordCounts.map((d) => d.wordCount));
-                        const adjustedMax = Math.ceil(maxWords * 1.3);
-                        return [adjustedMax, Math.round(adjustedMax * 0.75), Math.round(adjustedMax * 0.5), Math.round(adjustedMax * 0.25), 0].map((val, i) => (
-                          <span key={i} className="leading-none">{val}</span>
-                        ));
-                      })()}
-                    </div>
-                    
-                    {/* 그래프 영역 */}
-                    <div className="relative h-64 flex-1">
-                      {/* 그래프 배경 그리드 */}
-                      <div className="absolute inset-0 flex flex-col justify-between">
-                        {[0, 1, 2, 3, 4].map((i) => (
-                          <div
-                            key={i}
-                            className="border-t border-gray-200 dark:border-gray-700"
-                          />
-                        ))}
-                      </div>
-                    
-                    {/* 막대 그래프 */}
-                    <div className="relative h-full flex items-end justify-between gap-1 px-2">
-                      {dailyWordCounts.map((day, index) => {
-                        const maxWords = Math.max(...dailyWordCounts.map((d) => d.wordCount));
-                        // 최대값에 30% 여유를 두어 그래프가 예쁘게 보이도록 설정
-                        const adjustedMax = maxWords * 1.3;
-                        const heightPercent = adjustedMax > 0 ? (day.wordCount / adjustedMax) * 100 : 0;
-                        
-                        return (
-                          <motion.div
-                            key={day.date}
-                            initial={{ height: 0 }}
-                            animate={{ height: `${heightPercent}%` }}
-                            transition={{ duration: 0.5, delay: index * 0.05 }}
-                            className="flex-1 relative group cursor-pointer"
-                          >
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-500 to-purple-500 rounded-t-lg hover:from-blue-600 hover:to-purple-600 transition-colors"
-                              style={{ height: "100%" }}
-                            />
-                            
-                            {/* 툴팁 */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                              <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
-                                <div className="font-bold">{new Date(day.date + "T00:00:00").toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}</div>
-                                <div>단어: {day.wordCount}개</div>
-                                <div>일기: {day.entryCount}개</div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-
-                    {/* 선 그래프 (SVG) */}
-                    <svg className="absolute inset-0 pointer-events-none" preserveAspectRatio="none">
-                      <motion.polyline
-                        initial={{ pathLength: 0, opacity: 0 }}
-                        animate={{ pathLength: 1, opacity: 1 }}
-                        transition={{ duration: 1.5, delay: 0.5 }}
-                        points={dailyWordCounts.map((day, index) => {
-                          const maxWords = Math.max(...dailyWordCounts.map((d) => d.wordCount));
-                          // 최대값에 30% 여유를 두어 그래프가 예쁘게 보이도록 설정
-                          const adjustedMax = maxWords * 1.3;
-                          const heightPercent = adjustedMax > 0 ? (day.wordCount / adjustedMax) * 100 : 0;
-                          const x = ((index + 0.5) / dailyWordCounts.length) * 100;
-                          const y = 100 - heightPercent;
-                          return `${x},${y}`;
-                        }).join(" ")}
-                        fill="none"
-                        stroke="url(#lineGradient)"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                      <defs>
-                        <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#3b82f6" />
-                          <stop offset="100%" stopColor="#a855f7" />
-                        </linearGradient>
-                      </defs>
-                      
-                      {/* 점 표시 */}
-                      {dailyWordCounts.map((day, index) => {
-                        const maxWords = Math.max(...dailyWordCounts.map((d) => d.wordCount));
-                        // 최대값에 30% 여유를 두어 그래프가 예쁘게 보이도록 설정
-                        const adjustedMax = maxWords * 1.3;
-                        const heightPercent = adjustedMax > 0 ? (day.wordCount / adjustedMax) * 100 : 0;
-                        const x = ((index + 0.5) / dailyWordCounts.length) * 100;
-                        const y = 100 - heightPercent;
-                        
-                        return (
-                          <motion.circle
-                            key={`dot-${day.date}`}
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
-                            cx={`${x}%`}
-                            cy={`${y}%`}
-                            r="5"
-                            fill="white"
-                            stroke="url(#lineGradient)"
-                            strokeWidth="2"
-                          />
-                        );
-                      })}
-                    </svg>
-                    </div>
-                  </div>
-                  
-                  {/* X축 레이블 (날짜) */}
-                  <div className="flex justify-between mt-4 text-xs text-gray-600 dark:text-gray-400">
-                    {dailyWordCounts.length > 0 && (
-                      <>
-                        <span>
-                          {new Date(dailyWordCounts[0].date + "T00:00:00").toLocaleDateString("ko-KR", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
-                        {dailyWordCounts.length > 1 && dailyWordCounts.length <= 7 && (
-                          // 7일 이하일 때는 중간 날짜도 표시
-                          <span>
-                            {new Date(dailyWordCounts[Math.floor(dailyWordCounts.length / 2)].date + "T00:00:00").toLocaleDateString("ko-KR", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </span>
-                        )}
-                        <span>
-                          {new Date(dailyWordCounts[dailyWordCounts.length - 1].date + "T00:00:00").toLocaleDateString("ko-KR", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-4 text-center">
-                    💡 막대에 마우스를 올려보세요!
-                  </p>
-                </motion.div>
-              )}
 
               {/* 최근 일기 통계 */}
               {diaries.length > 0 && (

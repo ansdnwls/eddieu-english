@@ -124,6 +124,7 @@ export default function AdminLayout({
                 <nav className="space-y-2">
                   <AdminNavLink href="/admin" onClick={() => setMobileMenuOpen(false)}>📊 대시보드</AdminNavLink>
                   <AdminNavLink href="/admin/users" onClick={() => setMobileMenuOpen(false)}>👨‍👩‍👧 유저/아이 관리</AdminNavLink>
+                  <AdminNavLink href="/admin/withdrawal" onClick={() => setMobileMenuOpen(false)}>💔 탈퇴 관리</AdminNavLink>
                   <AdminNavLink href="/admin/content" onClick={() => setMobileMenuOpen(false)}>📝 콘텐츠 검토</AdminNavLink>
                   <AdminNavLink href="/admin/board" onClick={() => setMobileMenuOpen(false)}>📋 게시판 관리</AdminNavLink>
                   <AdminNavLink href="/admin/penpal" onClick={() => setMobileMenuOpen(false)}>✉️ 펜팔 관리</AdminNavLink>

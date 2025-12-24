@@ -103,6 +103,7 @@ export const ENGLISH_LEVELS: { value: EnglishLevel; label: string; description: 
 export interface DiaryEntry {
   id: string;
   userId: string;
+  childId?: string; // 아이 ID (다중 아이 지원)
   originalText: string;
   correctedText: string;
   feedback: string;
@@ -265,6 +266,33 @@ export interface UserProfile {
   displayName: string; // 표시 이름
 }
 
+// 아이 프로필 정보 (다중 아이 지원)
+export interface ChildProfile {
+  id: string; // 아이 고유 ID (child1, child2)
+  childName: string; // 아이 이름
+  parentId: string; // 부모 UID
+  email?: string; // 부모 이메일
+  age: number;
+  grade: string;
+  englishLevel: EnglishLevel | "";
+  arScore: string;
+  avatar: string;
+  accountType: "child";
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 부모 프로필 정보 (다중 아이 관리)
+export interface ParentProfile {
+  parentId: string; // 부모 UID
+  parentName: string;
+  email: string;
+  children: string[]; // 아이 ID 배열 ["child1", "child2"]
+  accountType: "parent";
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ElevenLabs 음성 관련 타입
 export type VoiceOption = 
   | "rachel_us"   // 🇺🇸 Rachel (여성, 미국) - 명확하고 친절한
@@ -348,6 +376,7 @@ export interface DailyWordCount {
 export interface PenpalProfile {
   id: string;
   userId: string;
+  childId: string; // 아이 ID (다중 아이 지원)
   childName: string; // 닉네임 (아이 이름)
   age: number;
   arScore: string;

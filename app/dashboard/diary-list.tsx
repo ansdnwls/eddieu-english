@@ -10,9 +10,10 @@ import Link from "next/link";
 interface DiaryListProps {
   userId: string;
   currentAccountType?: "child" | "parent";
+  currentChildId?: string | null; // 현재 선택된 아이 ID
 }
 
-export default function DiaryList({ userId, currentAccountType: propAccountType }: DiaryListProps) {
+export default function DiaryList({ userId, currentAccountType: propAccountType, currentChildId }: DiaryListProps) {
   const [diaries, setDiaries] = useState<DiaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentAccountType, setCurrentAccountType] = useState<"child" | "parent">(propAccountType || "child");
@@ -76,21 +77,65 @@ export default function DiaryList({ userId, currentAccountType: propAccountType 
           console.log("📄 문서 ID:", doc.id, "contentType:", data.contentType, "compositionType:", data.compositionType, "accountType:", data.accountType);
         });
         
-        console.log("🔍 필터링 전 총:", diaryList.length, "개 | 현재 모드:", currentAccountType);
+        console.log("🔍 필터링 전 총:", diaryList.length, "개 | 현재 모드:", currentAccountType, "| 아이 ID:", currentChildId, "| 타입:", typeof currentChildId);
         
-        // 클라이언트 사이드에서 계정 타입별 필터링
+        // 클라이언트 사이드에서 계정 타입 및 아이별 필터링
         const filteredList = diaryList.filter(diary => {
           const diaryAccountType = diary.accountType;
+          const diaryChildId = diary.childId;
           
-          // 1. accountType이 없는 기존 데이터는 아이 모드에서만 표시
-          // 2. accountType이 있으면 정확히 일치하는 것만 표시
+          console.log("📄 일기 필터링:", {
+            diaryId: diary.id,
+            diaryAccountType,
+            diaryChildId,
+            currentAccountType,
+            currentChildId,
+            날짜: new Date(diary.createdAt).toLocaleDateString("ko-KR")
+          });
+          
+          // 1. accountType 필터링
           if (diaryAccountType) {
             // accountType이 설정되어 있으면 현재 모드와 일치해야 함
-            return diaryAccountType === currentAccountType;
+            if (diaryAccountType !== currentAccountType) {
+              console.log("  ❌ accountType 불일치");
+              return false;
+            }
           } else {
             // accountType이 없는 기존 데이터는 아이 모드에서만 표시
-            return currentAccountType === "child";
+            if (currentAccountType !== "child") {
+              console.log("  ❌ accountType 없음 + 부모모드");
+              return false;
+            }
           }
+          
+          // 2. 아이 모드인 경우 childId 필터링
+          if (currentAccountType === "child" && currentChildId && currentChildId !== "") {
+            console.log("  🔍 childId 필터링 시작");
+            // childId가 있는 일기만 필터링
+            if (diaryChildId) {
+              // 현재 선택된 아이와 일치하지 않으면 건너뛰기
+              if (diaryChildId !== currentChildId) {
+                console.log("  ❌ childId 불일치:", diaryChildId, "!==", currentChildId);
+                return false;
+              }
+              console.log("  ✅ childId 일치");
+            }
+            // childId가 없는 기존 데이터 처리
+            else {
+              // currentChildId가 "child1"이거나 userId와 같으면 표시 (첫 번째 아이)
+              const isFirstChild = currentChildId === "child1" || currentChildId === userId;
+              if (!isFirstChild) {
+                console.log("  ❌ childId 없음 + 첫째 아이 아님 (currentChildId:", currentChildId, ", userId:", userId, ")");
+                return false;
+              }
+              console.log("  ✅ childId 없음 + 첫째 아이");
+            }
+          } else {
+            console.log("  ⚠️ childId 필터링 스킵 (currentChildId:", currentChildId, ")");
+          }
+          
+          console.log("  ✅ 필터 통과");
+          return true;
         });
         
         console.log("✅ 필터링 후:", filteredList.length, "개 항목");
@@ -112,7 +157,7 @@ export default function DiaryList({ userId, currentAccountType: propAccountType 
     );
 
     return () => unsubscribe();
-  }, [userId, currentAccountType]);
+  }, [userId, currentAccountType, currentChildId ?? ""]); // null/undefined를 빈 문자열로 변환하여 배열 크기 일정하게 유지
 
   const toggleSelection = (diaryId: string) => {
     const newSelected = new Set(selectedDiaries);

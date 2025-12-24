@@ -26,10 +26,17 @@ export default function PenpalRegisterPage() {
       if (!user || !db) return;
 
       try {
-        // 아이 정보 로드
-        const childDoc = await getDoc(doc(db, "children", user.uid));
-        if (childDoc.exists()) {
-          setChildInfo(childDoc.data());
+        // localStorage에서 현재 선택된 아이 정보 로드
+        const savedChildInfo = localStorage.getItem("childInfo");
+        if (savedChildInfo) {
+          const parsedInfo = JSON.parse(savedChildInfo);
+          setChildInfo(parsedInfo);
+        } else {
+          // localStorage에 없으면 Firestore에서 로드
+          const childDoc = await getDoc(doc(db, "children", user.uid));
+          if (childDoc.exists()) {
+            setChildInfo(childDoc.data());
+          }
         }
 
         // 기존 펜팔 프로필이 있는지 확인 (recruiting만 체크)
@@ -107,8 +114,12 @@ export default function PenpalRegisterPage() {
     setLoading(true);
 
     try {
+      // 현재 선택된 아이 ID 가져오기
+      const currentChildId = localStorage.getItem("currentChildId") || "child1";
+
       const penpalProfile = {
         userId: user.uid,
+        childId: currentChildId, // 아이 ID 추가
         childName: childInfo.childName || "익명",
         age: childInfo.age || 0,
         arScore: childInfo.arScore || "미입력",
@@ -121,12 +132,14 @@ export default function PenpalRegisterPage() {
       };
 
       await addDoc(collection(db, "penpalProfiles"), penpalProfile);
+      console.log("✅ 펜팔 프로필 등록 완료 (childId:", currentChildId, ")");
 
       alert("✅ 펜팔 모집이 등록되었습니다!");
       router.push("/board?category=penpal");
-    } catch (err: any) {
-      console.error("Error registering penpal:", err);
-      setError("등록 중 오류가 발생했습니다: " + err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("❌ Error registering penpal:", error);
+      setError("등록 중 오류가 발생했습니다: " + error.message);
     } finally {
       setLoading(false);
     }

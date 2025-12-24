@@ -11,8 +11,9 @@ import Link from "next/link";
 import Image from "next/image";
 import DiaryList from "./diary-list";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { DiaryEntry } from "@/app/types";
+import { DiaryEntry, ChildProfile } from "@/app/types";
 import AddressNotificationBanner from "@/app/components/AddressNotificationBanner";
+import ChildSwitcher from "@/app/components/ChildSwitcher";
 
 interface ChildInfo {
   childName: string; // 아이 이름
@@ -34,9 +35,12 @@ export default function DashboardPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [badgeCount, setBadgeCount] = useState(0);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<unknown[]>([]);
   const [currentAccountType, setCurrentAccountType] = useState<"child" | "parent">("child");
   const [hasParentAccount, setHasParentAccount] = useState(false);
+  const [currentChildId, setCurrentChildId] = useState<string | null>(null);
+  const [children, setChildren] = useState<ChildProfile[]>([]);
+  const [canAddMoreChildren, setCanAddMoreChildren] = useState(false);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -64,74 +68,87 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const loadChildInfo = async () => {
-      if (!user) return;
+      if (!user || !db) {
+        setLoading(false);
+        return;
+      }
 
       try {
-        // Firestore에서 데이터 로드
-        if (db) {
-          const docRef = doc(db, "children", user.uid);
-          const docSnap = await getDoc(docRef);
+        console.log("👶 아이 정보 로딩 시작...");
 
-          // 부모 계정 확인
-          const parentRef = doc(db, "parents", user.uid);
-          const parentSnap = await getDoc(parentRef);
-          const hasParent = parentSnap.exists();
-          setHasParentAccount(hasParent);
-          
-          console.log("📊 부모 계정 확인:", {
-            userId: user.uid,
-            hasParent,
-            parentData: parentSnap.exists() ? parentSnap.data() : null
+        // 부모 계정 확인
+        const parentRef = doc(db, "parents", user.uid);
+        const parentSnap = await getDoc(parentRef);
+        const hasParent = parentSnap.exists();
+        setHasParentAccount(hasParent);
+        
+        if (parentSnap.exists()) {
+          const parentData = parentSnap.data();
+          setParentInfo({
+            parentName: parentData.parentName || "부모"
           });
-          
-          if (parentSnap.exists()) {
-            const parentData = parentSnap.data();
-            setParentInfo({
-              parentName: parentData.parentName || "부모"
-            });
-          }
+        }
 
-          // 현재 계정 타입 불러오기
-          const savedAccountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
-          if (savedAccountType && savedAccountType === "parent" && parentSnap.exists()) {
-            setCurrentAccountType("parent");
-          } else {
-            setCurrentAccountType("child");
-          }
-
-          if (docSnap.exists()) {
-            setChildInfo(docSnap.data() as ChildInfo);
-          } else {
-            // LocalStorage에서 백업 로드
-            const saved = localStorage.getItem("childInfo");
-            if (saved) {
-              setChildInfo(JSON.parse(saved));
-            } else {
-              // 관리자가 아닌 경우에만 아이 정보 입력 페이지로 이동
-              if (!isAdmin) {
-                router.push("/add-child");
-              }
-            }
-          }
+        // 현재 계정 타입 불러오기
+        const savedAccountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
+        if (savedAccountType && savedAccountType === "parent" && parentSnap.exists()) {
+          setCurrentAccountType("parent");
         } else {
-          // LocalStorage에서 백업 로드
-          const saved = localStorage.getItem("childInfo");
-          if (saved) {
-            setChildInfo(JSON.parse(saved));
-          } else {
-            // 관리자가 아닌 경우에만 아이 정보 입력 페이지로 이동
-            if (!isAdmin) {
-              router.push("/add-child");
-            }
+          setCurrentAccountType("child");
+        }
+
+        // 모든 아이 목록 로드
+        const childrenRef = collection(db, "children");
+        const q = query(childrenRef, where("parentId", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+        
+        const childList: ChildProfile[] = [];
+        querySnapshot.forEach((doc) => {
+          childList.push({
+            id: doc.id.includes("_") ? doc.id.split("_")[1] : doc.id,
+            ...doc.data(),
+          } as ChildProfile);
+        });
+
+        console.log("✅ 아이 목록 로딩 완료:", childList);
+        setChildren(childList);
+        setCanAddMoreChildren(childList.length < 2);
+
+        // 현재 선택된 아이 ID 불러오기
+        let selectedChildId = localStorage.getItem("currentChildId");
+        
+        // 아이가 없으면 등록 페이지로
+        if (childList.length === 0) {
+          if (!isAdmin) {
+            router.push("/add-child");
           }
+          return;
+        }
+
+        // 선택된 아이가 없거나 유효하지 않으면 첫 번째 아이 선택
+        if (!selectedChildId || !childList.find(c => c.id === selectedChildId)) {
+          selectedChildId = childList[0].id;
+          localStorage.setItem("currentChildId", selectedChildId);
+        }
+
+        setCurrentChildId(selectedChildId);
+
+        // 현재 선택된 아이 정보 로드
+        const currentChild = childList.find(c => c.id === selectedChildId);
+        if (currentChild) {
+          setChildInfo({
+            childName: currentChild.childName,
+            parentId: currentChild.parentId,
+            age: currentChild.age,
+            grade: currentChild.grade,
+            englishLevel: currentChild.englishLevel,
+            arScore: currentChild.arScore,
+            avatar: currentChild.avatar,
+          });
+          localStorage.setItem("childInfo", JSON.stringify(currentChild));
         }
       } catch (error) {
-        console.error("Error loading child info:", error);
-        // LocalStorage에서 백업 로드
-        const saved = localStorage.getItem("childInfo");
-        if (saved) {
-          setChildInfo(JSON.parse(saved));
-        }
+        console.error("❌ Error loading child info:", error);
       } finally {
         setLoading(false);
       }
@@ -207,7 +224,7 @@ export default function DashboardPage() {
         <AddressNotificationBanner />
         
         {/* 헤더 */}
-        <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm">
+        <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm relative z-10">
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
@@ -225,11 +242,51 @@ export default function DashboardPage() {
               </h1>
             </Link>
             <div className="flex items-center gap-3">
+              {/* 아이 전환 버튼 (아이 모드일 때만, 2명 이상일 때만) */}
+              {currentAccountType === "child" && children.length > 1 && (
+                <ChildSwitcher
+                  currentChildId={currentChildId}
+                  onChildChange={(childId) => {
+                    console.log("🔄 아이 전환:", childId);
+                    setCurrentChildId(childId);
+                    localStorage.setItem("currentChildId", childId);
+                    
+                    // 선택된 아이 정보 업데이트
+                    const selectedChild = children.find(c => c.id === childId);
+                    if (selectedChild) {
+                      setChildInfo({
+                        childName: selectedChild.childName,
+                        parentId: selectedChild.parentId,
+                        age: selectedChild.age,
+                        grade: selectedChild.grade,
+                        englishLevel: selectedChild.englishLevel,
+                        arScore: selectedChild.arScore,
+                        avatar: selectedChild.avatar,
+                      });
+                      localStorage.setItem("childInfo", JSON.stringify(selectedChild));
+                      // 페이지 새로고침하여 일기 목록 갱신
+                      window.location.reload();
+                    }
+                  }}
+                />
+              )}
+
+              {/* 아이 추가 버튼 (최대 2명 제한) */}
+              {currentAccountType === "child" && canAddMoreChildren && (
+                <Link href="/add-child?mode=add">
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all"
+                  >
+                    <span className="text-lg">👶➕</span>
+                    <span className="text-sm">아이 추가</span>
+                  </motion.button>
+                </Link>
+              )}
+
               {/* 계정 전환 버튼 */}
-              {(() => {
-                console.log("🔍 전환 버튼 렌더링:", { hasParentAccount, currentAccountType, parentInfo });
-                return null;
-              })()}
               {hasParentAccount && (
                 <motion.button
                   type="button"
@@ -247,12 +304,7 @@ export default function DashboardPage() {
                   <span className="text-sm">{currentAccountType === "child" ? "부모 모드 전환" : "아이 모드 전환"}</span>
                 </motion.button>
               )}
-              {/* 임시: 부모 계정 없어도 버튼 표시 (디버깅용) */}
-              {!hasParentAccount && (
-                <div className="px-4 py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-xs">
-                  부모 계정 없음
-                </div>
-              )}
+
               <button
                 onClick={handleSignOut}
                 className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all"
@@ -272,7 +324,7 @@ export default function DashboardPage() {
               className="space-y-8"
             >
               {/* 현재 모드 표시 */}
-              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg px-4 py-2 text-center">
+              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg px-4 py-2 text-center relative z-0">
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                   {currentAccountType === "child" ? "👶 아이 모드입니다." : "👨‍💼 부모 모드입니다."}
                 </span>
@@ -459,7 +511,11 @@ export default function DashboardPage() {
               {/* 일기 목록 */}
               {user?.uid && (
                 <div className="mt-8">
-                  <DiaryList userId={user.uid} currentAccountType={currentAccountType} />
+                  <DiaryList 
+                    userId={user.uid} 
+                    currentAccountType={currentAccountType}
+                    currentChildId={currentChildId}
+                  />
                 </div>
               )}
             </motion.div>

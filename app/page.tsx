@@ -35,6 +35,7 @@ function HomeContent() {
   const [result, setResult] = useState<CorrectionResultType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentAccountType, setCurrentAccountType] = useState<"child" | "parent">("child");
+  const [currentChildId, setCurrentChildId] = useState<string | null>(null);
   const [inputMode, setInputMode] = useState<"photo" | "typing">("photo");
   
   // OCR 관련 상태
@@ -113,11 +114,17 @@ function HomeContent() {
     }
   }, [searchParams]);
 
-  // 계정 타입 로드
+  // 계정 타입 및 아이 ID 로드
   useEffect(() => {
     const accountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
     if (accountType) {
       setCurrentAccountType(accountType);
+    }
+
+    // 현재 선택된 아이 ID 로드
+    const childId = localStorage.getItem("currentChildId");
+    if (childId) {
+      setCurrentChildId(childId);
     }
   }, []);
 
@@ -127,6 +134,16 @@ function HomeContent() {
       if (!user || !db) return;
       
       try {
+        // localStorage에서 저장된 아이 정보 먼저 확인
+        const savedChildInfo = localStorage.getItem("childInfo");
+        if (savedChildInfo) {
+          const data = JSON.parse(savedChildInfo);
+          setChildInfo(data);
+          setEnglishLevel(data.englishLevel || "");
+          return;
+        }
+
+        // localStorage에 없으면 Firestore에서 로드
         const docRef = doc(db, "children", user.uid);
         const docSnap = await getDoc(docRef);
         
@@ -249,6 +266,7 @@ function HomeContent() {
         try {
           await saveDiary({
             userId: user.uid,
+            childId: currentAccountType === "child" ? currentChildId || undefined : undefined,
             originalText: directText,
             correctionData,
             englishLevel: (englishLevel || childInfo?.englishLevel || "Lv.1") as EnglishLevel,
@@ -312,8 +330,14 @@ function HomeContent() {
         // Firestore에 일기 저장 (lib 함수 사용)
         if (user) {
           try {
+            // 현재 선택된 아이 ID 가져오기
+            const currentChildId = currentAccountType === "child" 
+              ? localStorage.getItem("currentChildId") || undefined
+              : undefined;
+
             await saveDiary({
               userId: user.uid,
+              childId: currentChildId,
               originalText: correctionData.originalText,
               correctionData,
               englishLevel: (englishLevel || childInfo?.englishLevel || "Lv.1") as EnglishLevel,

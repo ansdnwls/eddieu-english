@@ -16,6 +16,53 @@ type AccentType = "US" | "UK";
 type TTSProvider = "browser" | "elevenlabs";
 type GenderType = "female" | "male";
 
+// Speech Recognition 타입 정의
+interface SpeechRecognition extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+}
+
+interface SpeechRecognitionEvent {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+}
+
+interface SpeechRecognitionResult {
+  [index: number]: SpeechRecognitionAlternative;
+  length: number;
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+  message?: string;
+}
+
+interface WindowWithSpeechRecognition extends Window {
+  SpeechRecognition?: {
+    new (): SpeechRecognition;
+  };
+  webkitSpeechRecognition?: {
+    new (): SpeechRecognition;
+  };
+}
+
 export default function PracticeSentence({ sentence, original, englishLevel = "Lv.1" }: PracticeSentenceProps) {
   const { user } = useAuth();
   const router = useRouter();
@@ -26,6 +73,7 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
   const [gender, setGender] = useState<GenderType>("female"); // 기본값: 여성
   const [speed, setSpeed] = useState<number>(0.8); // 기본 속도
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   
@@ -53,8 +101,24 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
   const [isPlayingRecording, setIsPlayingRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const playbackAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // 모바일 디바이스 감지
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const checkMobile = () => {
+        const userAgent = navigator.userAgent.toLowerCase();
+        const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent) ||
+          (window.innerWidth <= 768);
+        setIsMobile(isMobileDevice);
+      };
+      
+      checkMobile();
+      window.addEventListener("resize", checkMobile);
+      return () => window.removeEventListener("resize", checkMobile);
+    }
+  }, []);
 
   // 구독 상태 확인
   useEffect(() => {
@@ -76,7 +140,8 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
       console.log("녹음 지원:", recordingSupported);
       
       // Speech Recognition 지원 확인
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const win = window as WindowWithSpeechRecognition;
+      const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
       const speechSupported = !!SpeechRecognition;
       setIsSpeechRecognitionSupported(speechSupported);
       console.log("음성 인식 지원:", speechSupported);
@@ -682,8 +747,14 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
       };
 
       // Speech Recognition 설정
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
+      const win = window as WindowWithSpeechRecognition;
+      const SpeechRecognitionClass = win.SpeechRecognition || win.webkitSpeechRecognition;
+      
+      if (!SpeechRecognitionClass) {
+        throw new Error("Speech Recognition is not supported");
+      }
+      
+      const recognition = new SpeechRecognitionClass();
       recognitionRef.current = recognition;
       
       recognition.lang = accent === "US" ? "en-US" : "en-GB";
@@ -691,9 +762,16 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
       
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        const confidence = event.results[0][0].confidence;
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const firstResult = event.results[0];
+        if (!firstResult || firstResult.length === 0) {
+          console.warn("⚠️ 음성 인식 결과가 없습니다.");
+          return;
+        }
+        
+        const firstAlternative = firstResult[0];
+        const transcript = firstAlternative.transcript;
+        const confidence = firstAlternative.confidence;
         
         console.log("✅ 인식된 텍스트:", transcript);
         console.log("📊 신뢰도:", confidence);
@@ -735,7 +813,7 @@ export default function PracticeSentence({ sentence, original, englishLevel = "L
         setPronunciationResult(message);
       };
       
-      recognition.onerror = (event: any) => {
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error("❌ 음성 인식 오류:", event.error);
         let errorMessage = "❌ 음성 인식 중 오류가 발생했습니다.";
         

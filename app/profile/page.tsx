@@ -44,6 +44,7 @@ export default function ProfilePage() {
   const [withdrawalReason, setWithdrawalReason] = useState("");
   const [withdrawalDetail, setWithdrawalDetail] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
+  const [currentChildId, setCurrentChildId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ChildInfo>({
     childName: "",
     parentId: user?.uid || "",
@@ -62,9 +63,16 @@ export default function ProfilePage() {
       }
 
       try {
-        // 아이 정보 확인
-        const childRef = doc(db, "children", user.uid);
+        // 현재 선택된 아이 ID 가져오기
+        const savedChildId = localStorage.getItem("currentChildId") || "child1";
+        setCurrentChildId(savedChildId);
+        
+        // 아이 정보 확인 (다중 아이 지원)
+        const childDocId = `${user.uid}_${savedChildId}`;
+        const childRef = doc(db, "children", childDocId);
         const childSnap = await getDoc(childRef);
+        
+        console.log("📄 조회 중인 문서 ID:", childDocId);
 
         // 부모 정보 확인
         const parentRef = doc(db, "parents", user.uid);
@@ -129,6 +137,10 @@ export default function ProfilePage() {
         throw new Error("로그인이 필요합니다.");
       }
 
+      // 현재 선택된 아이 ID 가져오기
+      const savedChildId = currentChildId || localStorage.getItem("currentChildId") || "child1";
+      const childDocId = `${user.uid}_${savedChildId}`;
+      
       const childData = {
         childName: formData.childName,
         parentId: user.uid,
@@ -141,8 +153,14 @@ export default function ProfilePage() {
         updatedAt: new Date().toISOString(),
       };
 
-      // Firestore 업데이트
-      await updateDoc(doc(db, "children", user.uid), childData);
+      // Firestore 업데이트 (다중 아이 지원)
+      await updateDoc(doc(db, "children", childDocId), childData);
+      
+      // localStorage의 childInfo도 업데이트
+      localStorage.setItem("childInfo", JSON.stringify({
+        id: savedChildId,
+        ...childData,
+      }));
 
       // 부모 프로필 추가 또는 수정
       if (parentName.trim()) {
@@ -181,15 +199,181 @@ export default function ProfilePage() {
     }
   };
 
+  // 아이 계정 삭제
+  const handleDeleteChild = async () => {
+    if (!user || !db || !currentChildId) {
+      alert("오류가 발생했습니다.");
+      return;
+    }
+
+    // 1차 확인
+    const confirm1 = confirm(
+      `⚠️ 정말로 "${formData.childName}" 아이의 계정을 삭제하시겠습니까?\n\n` +
+      `삭제되는 데이터:\n` +
+      `✓ 아이 정보\n` +
+      `✓ 모든 일기 및 작문\n` +
+      `✓ 펜팔 프로필\n` +
+      `✓ 학습 기록\n\n` +
+      `⚠️ 삭제된 데이터는 복구할 수 없습니다!`
+    );
+
+    if (!confirm1) return;
+
+    // 2차 확인 (아이 이름 입력)
+    const confirmName = prompt(
+      `정말로 삭제하시려면 아이 이름 "${formData.childName}"을(를) 입력해주세요:`
+    );
+
+    if (confirmName !== formData.childName) {
+      alert("아이 이름이 일치하지 않습니다. 삭제가 취소되었습니다.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      const childDocId = `${user.uid}_${currentChildId}`;
+
+      // 1. 아이의 모든 일기 삭제
+      const diariesQuery = query(
+        collection(db, "diaries"),
+        where("userId", "==", user.uid),
+        where("childId", "==", currentChildId)
+      );
+      const diariesSnapshot = await getDocs(diariesQuery);
+      for (const diaryDoc of diariesSnapshot.docs) {
+        await deleteDoc(doc(db, "diaries", diaryDoc.id));
+      }
+      console.log(`🗑️ ${diariesSnapshot.size}개의 일기 삭제 완료`);
+
+      // 2. 펜팔 프로필 삭제
+      const penpalQuery = query(
+        collection(db, "penpalProfiles"),
+        where("userId", "==", user.uid),
+        where("childId", "==", currentChildId)
+      );
+      const penpalSnapshot = await getDocs(penpalQuery);
+      for (const penpalDoc of penpalSnapshot.docs) {
+        await deleteDoc(doc(db, "penpalProfiles", penpalDoc.id));
+      }
+      console.log(`🗑️ 펜팔 프로필 삭제 완료`);
+
+      // 3. 아이 정보 삭제
+      await deleteDoc(doc(db, "children", childDocId));
+      console.log(`🗑️ 아이 정보 삭제 완료: ${childDocId}`);
+
+      // 4. 부모 프로필에서 아이 제거
+      const parentRef = doc(db, "parents", user.uid);
+      const parentSnap = await getDoc(parentRef);
+      if (parentSnap.exists()) {
+        const parentData = parentSnap.data();
+        const updatedChildren = (parentData.children || []).filter(
+          (id: string) => id !== currentChildId
+        );
+        await updateDoc(parentRef, {
+          children: updatedChildren,
+          updatedAt: new Date().toISOString(),
+        });
+        console.log(`✅ 부모 프로필 업데이트 완료`);
+      }
+
+      // 5. localStorage 정리
+      localStorage.removeItem("currentChildId");
+      localStorage.removeItem("childInfo");
+
+      alert(`✅ "${formData.childName}" 계정이 삭제되었습니다.`);
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("❌ 아이 계정 삭제 실패:", error);
+      setError("계정 삭제 중 오류가 발생했습니다: " + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 부모 계정 삭제
+  const handleDeleteParent = async () => {
+    if (!user || !db || !hasParentAccount) {
+      alert("부모 계정이 없습니다.");
+      return;
+    }
+
+    const confirm1 = confirm(
+      `⚠️ 정말로 부모 계정을 삭제하시겠습니까?\n\n` +
+      `삭제되는 데이터:\n` +
+      `✓ 부모 프로필 정보\n` +
+      `✓ 부모 모드로 작성한 모든 작문\n\n` +
+      `⚠️ 삭제된 데이터는 복구할 수 없습니다!\n` +
+      `💡 아이 계정은 유지됩니다.`
+    );
+
+    if (!confirm1) return;
+
+    setSaving(true);
+    setError("");
+
+    try {
+      // 1. 부모 모드로 작성한 작문 삭제
+      const compositionsQuery = query(
+        collection(db, "diaries"),
+        where("userId", "==", user.uid),
+        where("accountType", "==", "parent")
+      );
+      const compositionsSnapshot = await getDocs(compositionsQuery);
+      for (const compDoc of compositionsSnapshot.docs) {
+        await deleteDoc(doc(db, "diaries", compDoc.id));
+      }
+      console.log(`🗑️ ${compositionsSnapshot.size}개의 부모 작문 삭제 완료`);
+
+      // 2. 부모 프로필 삭제
+      await deleteDoc(doc(db, "parents", user.uid));
+      console.log(`🗑️ 부모 프로필 삭제 완료`);
+
+      setHasParentAccount(false);
+      setParentName("");
+      setAddParent(false);
+      alert("✅ 부모 계정이 삭제되었습니다.");
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("❌ 부모 계정 삭제 실패:", error);
+      setError("부모 계정 삭제 중 오류가 발생했습니다: " + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleWithdrawal = async () => {
     if (!withdrawalReason) {
       setError("탈퇴 사유를 선택해주세요.");
       return;
     }
 
-    if (!confirm("정말 회원탈퇴를 하시겠습니까?\n\n모든 데이터가 삭제되며 복구할 수 없습니다.")) {
-      return;
-    }
+    // 1차 확인
+    const confirm1 = confirm(
+      "⚠️ 정말로 회원탈퇴를 하시겠습니까?\n\n" +
+      "삭제되는 모든 데이터:\n" +
+      "✓ 모든 아이 계정\n" +
+      "✓ 부모 계정\n" +
+      "✓ 모든 일기 및 작문\n" +
+      "✓ 펜팔 프로필 및 매칭\n" +
+      "✓ 학습 기록 및 통계\n" +
+      "✓ 구독 정보\n\n" +
+      "⚠️ 삭제된 데이터는 절대 복구할 수 없습니다!"
+    );
+
+    if (!confirm1) return;
+
+    // 2차 확인 (최종 확인)
+    const confirm2 = confirm(
+      "🛑 최종 확인\n\n" +
+      "정말로 탈퇴하시겠습니까?\n" +
+      "이 작업은 되돌릴 수 없습니다.\n\n" +
+      "확인을 누르면 즉시 회원탈퇴가 진행됩니다."
+    );
+
+    if (!confirm2) return;
 
     if (!user || !db) {
       setError("로그인이 필요합니다.");
@@ -204,21 +388,48 @@ export default function ProfilePage() {
       const firestoreDb = db as NonNullable<typeof db>;
 
       // 1. 탈퇴 이력 저장 (관리자 확인용)
+      // 자녀 수 계산
+      const childrenCountQuery = query(
+        collection(firestoreDb, "children"),
+        where("parentId", "==", user.uid)
+      );
+      const childrenCountSnapshot = await getDocs(childrenCountQuery);
+      const childrenCount = childrenCountSnapshot.size;
+
+      // 일기 수 계산
+      const diariesCountQuery = query(
+        collection(firestoreDb, "diaries"),
+        where("userId", "==", user.uid)
+      );
+      const diariesCountSnapshot = await getDocs(diariesCountQuery);
+      const diariesCount = diariesCountSnapshot.size;
+
       const withdrawalRecord = {
         userId: user.uid,
         userEmail: user.email || "",
         childName: formData.childName || "",
         reason: withdrawalReason,
         detail: withdrawalDetail || "",
+        childrenCount: childrenCount,
+        diariesCount: diariesCount,
         withdrawnAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       };
 
       await addDoc(collection(firestoreDb, "withdrawalRequests"), withdrawalRecord);
+      console.log("✅ 탈퇴 기록 저장 완료 (자녀:", childrenCount, "일기:", diariesCount, ")");
 
       // 2. 사용자 데이터 삭제
-      // children 컬렉션에서 삭제
-      await deleteDoc(doc(firestoreDb, "children", user.uid));
+      // children 컬렉션에서 모든 자녀 삭제 (다중 자녀 지원)
+      const childrenQuery = query(
+        collection(firestoreDb, "children"),
+        where("parentId", "==", user.uid)
+      );
+      const childrenSnapshot = await getDocs(childrenQuery);
+      for (const childDoc of childrenSnapshot.docs) {
+        await deleteDoc(doc(firestoreDb, "children", childDoc.id));
+        console.log("🗑️ 자녀 정보 삭제:", childDoc.id);
+      }
       
       // parents 컬렉션에서 삭제 (있다면)
       const parentRef = doc(firestoreDb, "parents", user.uid);
@@ -298,8 +509,13 @@ export default function ProfilePage() {
                 프로필 관리
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
-                아이의 정보를 업데이트하세요
+                {formData.childName ? `${formData.childName}의 정보를 업데이트하세요` : "아이의 정보를 업데이트하세요"}
               </p>
+              {currentChildId && (
+                <div className="mt-3 inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-lg text-sm font-semibold">
+                  👶 현재 수정 중: {currentChildId === "child1" ? "첫째" : "둘째"} ({currentChildId})
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -504,6 +720,23 @@ export default function ProfilePage() {
                           게시판에 "OO이(가) 쓴 글" 형식으로 표시됩니다.
                         </p>
                       </div>
+
+                      {/* 부모 계정 삭제 버튼 */}
+                      {hasParentAccount && (
+                        <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-700">
+                          <button
+                            type="button"
+                            onClick={handleDeleteParent}
+                            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                          >
+                            <span>🗑️</span>
+                            <span>부모 계정 삭제하기</span>
+                          </button>
+                          <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 text-center">
+                            ⚠️ 부모 모드로 작성한 모든 작문이 삭제됩니다
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -529,31 +762,46 @@ export default function ProfilePage() {
                 </motion.div>
               )}
 
-              <div className="flex gap-4">
+              <div className="space-y-3">
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => router.back()}
+                    className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold py-3 px-6 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={
+                      saving || 
+                      !formData.childName || 
+                      !formData.englishLevel
+                    }
+                    className={`flex-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all ${
+                      saving || 
+                      !formData.childName || 
+                      !formData.englishLevel
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:scale-105 hover:shadow-xl"
+                    }`}
+                  >
+                    {saving ? "저장 중..." : "변경사항 저장"}
+                  </button>
+                </div>
+
+                {/* 아이 계정 삭제 버튼 */}
                 <button
                   type="button"
-                  onClick={() => router.back()}
-                  className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold py-3 px-6 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+                  onClick={handleDeleteChild}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2"
                 >
-                  취소
+                  <span>🗑️</span>
+                  <span>이 아이 계정 삭제하기</span>
                 </button>
-                <button
-                  type="submit"
-                  disabled={
-                    saving || 
-                    !formData.childName || 
-                    !formData.englishLevel
-                  }
-                  className={`flex-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all ${
-                    saving || 
-                    !formData.childName || 
-                    !formData.englishLevel
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:scale-105 hover:shadow-xl"
-                  }`}
-                >
-                  {saving ? "저장 중..." : "변경사항 저장"}
-                </button>
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  ⚠️ 이 아이의 모든 일기와 데이터가 삭제됩니다 (복구 불가)
+                </p>
               </div>
             </form>
 

@@ -94,8 +94,14 @@ export default function CorrectionResult({ result }: CorrectionResultProps) {
       const sentenceCount = countSentences(originalText);
       const uniqueWordsCount = countUniqueWords(originalText);
 
+      // 현재 선택된 아이 ID 가져오기
+      const currentChildId = currentAccountType === "child" 
+        ? localStorage.getItem("currentChildId") || undefined
+        : undefined;
+
       const diaryEntry = {
         userId: user.uid,
+        childId: currentChildId || null,
         originalText: originalText,
         correctedText: result.correctedText,
         feedback: result.feedback,
@@ -120,7 +126,7 @@ export default function CorrectionResult({ result }: CorrectionResultProps) {
       };
 
       await addDoc(collection(db, "diaries"), diaryEntry);
-      console.log("✅ 교정 결과가 저장되었습니다!");
+      console.log("✅ 교정 결과가 저장되었습니다! (childId:", currentChildId || "부모", ")");
       setIsSaved(true);
       
       // 3초 후 저장 완료 메시지 숨기기

@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, FormEvent, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import EnglishLevelSelector from "@/app/components/EnglishLevelSelector";
-import { EnglishLevel } from "@/app/types";
+import { EnglishLevel, ChildProfile } from "@/app/types";
 
 interface ChildInfo {
   childName: string; // 아이 이름 (데이터 식별용 + UI 표현용)
@@ -30,7 +30,11 @@ const avatars = ["👦", "👧", "🧒", "👶", "🎭", "🦸", "🧙", "👨�
 export default function AddChildPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isAddingSecond = searchParams.get("mode") === "add"; // 두 번째 아이 추가 모드
   const [loading, setLoading] = useState(false);
+  const [checkingExisting, setCheckingExisting] = useState(true);
+  const [existingChildrenCount, setExistingChildrenCount] = useState(0);
   const [error, setError] = useState("");
   const [addParent, setAddParent] = useState(false);
   const [parentName, setParentName] = useState("");
@@ -51,21 +55,62 @@ export default function AddChildPage() {
     }
   }, [user]);
 
+  // 기존 아이 수 확인
+  useEffect(() => {
+    const checkExistingChildren = async () => {
+      if (!user || !db) {
+        setCheckingExisting(false);
+        return;
+      }
+
+      try {
+        const childrenRef = collection(db, "children");
+        const q = query(childrenRef, where("parentId", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+        const count = querySnapshot.size;
+        
+        setExistingChildrenCount(count);
+        console.log("👶 기존 아이 수:", count);
+
+        // 이미 2명이 있으면 부모 모드 권장
+        if (count >= 2 && isAddingSecond) {
+          setError("⚠️ 최대 2명의 아이까지 등록 가능합니다.\n\n💡 3명 이상의 자녀를 관리하고 싶으시다면?\n→ 부모 모드를 활성화하고 각 자녀의 일기를 부모 계정으로 작성해주세요!\n→ 부모 모드는 성인을 위한 고급 영어 작문 첨삭 기능도 제공합니다.");
+        }
+      } catch (err) {
+        console.error("❌ 기존 아이 확인 실패:", err);
+      } finally {
+        setCheckingExisting(false);
+      }
+    };
+
+    checkExistingChildren();
+  }, [user, isAddingSecond]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      if (!user) {
+      if (!user || !db) {
         throw new Error("로그인이 필요합니다.");
       }
 
+      // 최대 2명 제한 확인 및 부모 모드 권장
+      if (existingChildrenCount >= 2) {
+        throw new Error("⚠️ 최대 2명의 아이까지 등록 가능합니다.\n\n💡 3명 이상의 자녀를 관리하고 싶으시다면?\n→ 부모 모드를 활성화하고 각 자녀의 일기를 부모 계정으로 작성해주세요!\n→ 부모 모드는 성인을 위한 고급 영어 작문 첨삭 기능도 제공합니다.");
+      }
+
+      // 아이 ID 결정 (child1 또는 child2)
+      const childId = existingChildrenCount === 0 ? "child1" : "child2";
+      console.log(`👶 아이 추가: ${childId} (기존 ${existingChildrenCount}명)`);
+
       // 아이 정보 저장
-      const childData = {
+      const childData: ChildProfile = {
+        id: childId,
         childName: formData.childName,
         parentId: user.uid,
-        email: user.email || null, // 부모(로그인 계정)의 이메일 추가
+        email: user.email || null,
         age: formData.age,
         grade: formData.grade,
         englishLevel: formData.englishLevel,
@@ -76,35 +121,51 @@ export default function AddChildPage() {
         updatedAt: new Date().toISOString(),
       };
 
-      if (db) {
-        // children 컬렉션에 저장
-        await setDoc(doc(db, "children", user.uid), childData);
+      // children 컬렉션에 저장 (문서 ID를 ${userId}_${childId} 형태로)
+      const docId = `${user.uid}_${childId}`;
+      await setDoc(doc(db, "children", docId), childData);
+      console.log(`✅ 아이 정보 저장 완료: ${docId}`);
 
-        // 부모 프로필도 추가하는 경우
-        if (addParent && parentName.trim()) {
-          const parentData = {
-            parentName: parentName.trim(),
-            email: user.email || null, // 부모 이메일 추가
-            accountType: "parent",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          
-          // parents 컬렉션에 저장
-          await setDoc(doc(db, "parents", user.uid), parentData);
-          
-          // LocalStorage에도 저장
-          localStorage.setItem("parentInfo", JSON.stringify(parentData));
-        }
+      // 부모 프로필 처리
+      const parentRef = doc(db, "parents", user.uid);
+      const parentSnap = await getDoc(parentRef);
+
+      if (addParent && parentName.trim() && !parentSnap.exists()) {
+        // 부모 프로필 신규 생성
+        const parentData = {
+          parentId: user.uid,
+          parentName: parentName.trim(),
+          email: user.email || null,
+          children: [childId],
+          accountType: "parent",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        await setDoc(parentRef, parentData);
+        localStorage.setItem("parentInfo", JSON.stringify(parentData));
+        console.log("✅ 부모 프로필 생성 완료");
+      } else if (parentSnap.exists()) {
+        // 기존 부모 프로필에 아이 추가
+        const existingParentData = parentSnap.data();
+        const updatedChildren = [...(existingParentData.children || []), childId];
+        await setDoc(parentRef, {
+          ...existingParentData,
+          children: updatedChildren,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+        console.log("✅ 부모 프로필 업데이트 완료 (아이 추가)");
       }
 
-      // LocalStorage에 아이 정보 백업
+      // LocalStorage에 현재 선택된 아이 저장
+      localStorage.setItem("currentChildId", childId);
       localStorage.setItem("childInfo", JSON.stringify(childData));
 
       // 대시보드로 이동
       router.push("/dashboard");
-    } catch (err: any) {
-      setError("저장 중 오류가 발생했습니다: " + err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("❌ 저장 실패:", error);
+      setError(error.message || "저장 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
@@ -120,13 +181,59 @@ export default function AddChildPage() {
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8"
           >
             <div className="text-center mb-8">
-              <div className="text-5xl mb-4">👶</div>
+              <div className="text-5xl mb-4">{isAddingSecond ? "👶➕" : "👶"}</div>
               <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-                아이 정보 입력
+                {isAddingSecond ? `${existingChildrenCount + 1}번째 아이 정보 입력` : "아이 정보 입력"}
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
-                아이의 정보를 입력해주세요
+                {isAddingSecond
+                  ? `${existingChildrenCount + 1}번째 아이의 정보를 입력해주세요 (최대 2명)`
+                  : "아이의 정보를 입력해주세요"}
               </p>
+              {existingChildrenCount > 0 && (
+                <div className="mt-4 space-y-2">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      💡 현재 {existingChildrenCount}명의 아이가 등록되어 있습니다.
+                      {existingChildrenCount < 2 && " 최대 2명까지 추가 가능합니다."}
+                    </p>
+                  </div>
+                  {existingChildrenCount >= 2 && (
+                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-700">
+                      <div className="flex items-start gap-3">
+                        <div className="text-2xl">👨‍👩‍👧‍👦</div>
+                        <div>
+                          <h4 className="text-sm font-bold text-purple-800 dark:text-purple-300 mb-2">
+                            3명 이상의 자녀를 관리하고 싶으신가요?
+                          </h4>
+                          <p className="text-xs text-purple-700 dark:text-purple-400 space-y-1">
+                            <span className="block">✅ <strong>부모 모드</strong>를 활성화하세요!</span>
+                            <span className="block">✅ 각 자녀의 일기를 부모 계정으로 작성</span>
+                            <span className="block">✅ 성인용 고급 영어 작문 첨삭 기능 제공</span>
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const confirm = window.confirm(
+                                "부모 프로필을 추가하시겠습니까?\n\n" +
+                                "부모 모드에서는 자녀 구분 없이 부모님의 계정으로\n" +
+                                "모든 자녀의 일기를 관리하실 수 있습니다."
+                              );
+                              if (confirm) {
+                                setAddParent(true);
+                                window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+                              }
+                            }}
+                            className="mt-3 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-semibold rounded-lg hover:scale-105 transition-all shadow-md"
+                          >
+                            부모 프로필 추가하기 →
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">

@@ -13,6 +13,7 @@ interface User {
   lastLogin?: string;
   childInfo?: any;
   diaryCount?: number;
+  featuredCount?: number;
   subscriptionPlan?: string;
 }
 
@@ -135,10 +136,14 @@ export default function UsersPage() {
 
         // 일기 데이터 로드
         const diariesSnapshot = await getDocs(collection(db, "diaries"));
-        const allDiaries = diariesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          userId: doc.data().userId,
-        }));
+        const allDiaries = diariesSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            userId: data.userId,
+            featured: data.featured === true,
+          };
+        });
 
         // children 컬렉션 처리
         for (const childDoc of childrenSnapshot.docs) {
@@ -177,6 +182,7 @@ export default function UsersPage() {
 
           // 일기 수 계산
           const userDiaries = allDiaries.filter((d) => d.userId === userId);
+          const featuredDiaries = userDiaries.filter((d) => d.featured === true);
 
           // 이메일 정보 가져오기
           let userEmail = childData.email || null;
@@ -199,6 +205,7 @@ export default function UsersPage() {
             lastLogin: childData.lastLogin,
             childInfo: childData,
             diaryCount: userDiaries.length,
+            featuredCount: featuredDiaries.length,
             subscriptionPlan: plan,
           });
         }
@@ -236,13 +243,18 @@ export default function UsersPage() {
             }
           }
 
+          // 일기 수 계산 (users 컬렉션의 경우)
+          const userDiaries = allDiaries.filter((d) => d.userId === userId);
+          const featuredDiaries = userDiaries.filter((d) => d.featured === true);
+
           userList.push({
             id: userId,
             email: userData.email || `UID: ${userId.substring(0, 8)}...`,
             createdAt: userData.createdAt,
             lastLogin: userData.lastLogin,
             subscriptionPlan: plan,
-            diaryCount: 0,
+            diaryCount: userDiaries.length,
+            featuredCount: featuredDiaries.length,
           });
         });
 
@@ -616,6 +628,9 @@ export default function UsersPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       일기 수
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      오늘의 일기 선정
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -624,7 +639,7 @@ export default function UsersPage() {
                     .map((user) => (
                       <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                          {user.childInfo?.name || "-"}
+                          {user.childInfo?.childName || "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {user.childInfo?.age || "-"}세
@@ -636,6 +651,11 @@ export default function UsersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {user.diaryCount || 0}개
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded font-semibold">
+                            ⭐ {user.featuredCount || 0}회
+                          </span>
                         </td>
                       </tr>
                     ))}
