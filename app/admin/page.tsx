@@ -98,7 +98,7 @@ export default function AdminDashboard() {
         let todayNewUsers = 0;
 
         // children 컬렉션 처리
-        childrenSnapshot.docs.forEach((childDoc) => {
+        childrenSnapshot.docs.forEach((childDoc: QueryDocumentSnapshot<DocumentData>) => {
           const childData = childDoc.data();
           const userId = childDoc.id;
           processedUserIds.add(userId);
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
         });
 
         // users 컬렉션 처리 (children에 없는 경우)
-        usersSnapshot.docs.forEach((userDoc) => {
+        usersSnapshot.docs.forEach((userDoc: QueryDocumentSnapshot<DocumentData>) => {
           const userId = userDoc.id;
           if (processedUserIds.has(userId)) return; // 이미 처리됨
 
