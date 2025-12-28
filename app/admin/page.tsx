@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -83,7 +83,7 @@ export default function AdminDashboard() {
 
         // 구독 정보를 Map으로 변환
         const subscriptionMap = new Map<string, string>();
-        subscriptionsSnapshot.docs.forEach((doc) => {
+        subscriptionsSnapshot.docs.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
           const data = doc.data();
           if (data.userId && data.planId) {
             subscriptionMap.set(data.userId, data.planId);
@@ -142,7 +142,7 @@ export default function AdminDashboard() {
         let todayWithdrawals = 0;
         try {
           const withdrawalsSnapshot = await getDocs(collection(db, "withdrawalRequests"));
-          withdrawalsSnapshot.forEach((doc) => {
+          withdrawalsSnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
             if (data.withdrawnAt) {
               const withdrawalDate = new Date(data.withdrawnAt).getTime();
@@ -164,7 +164,7 @@ export default function AdminDashboard() {
             where("category", "==", "qna")
           );
           const qnaSnapshot = await getDocs(qnaQuery);
-          qnaSnapshot.forEach((doc) => {
+          qnaSnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
             // isRead가 false이거나 undefined인 경우 (미확인)
             if (data.isRead !== true && !data.isDeleted) {
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
             where("category", "==", "advertisement")
           );
           const adsSnapshot = await getDocs(adsQuery);
-          adsSnapshot.forEach((doc) => {
+          adsSnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
             // isRead가 false이거나 undefined인 경우 (미확인)
             if (data.isRead !== true && !data.isDeleted) {
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
         // 5. 오늘 작성 일기 수
         let todayDiaries = 0;
         const diariesSnapshot = await getDocs(collection(db, "diaries"));
-        diariesSnapshot.forEach((doc) => {
+        diariesSnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
           const data = doc.data();
           if (data.createdAt) {
             const createdAt = new Date(data.createdAt).getTime();
@@ -212,7 +212,7 @@ export default function AdminDashboard() {
 
         // Compositions도 포함
         const compositionsSnapshot = await getDocs(collection(db, "compositions"));
-        compositionsSnapshot.forEach((doc) => {
+        compositionsSnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
           const data = doc.data();
           if (data.createdAt) {
             const createdAt = new Date(data.createdAt).getTime();
@@ -238,7 +238,7 @@ export default function AdminDashboard() {
 
         try {
           const apiLogsSnapshot = await getDocs(collection(db, "apiLogs"));
-          apiLogsSnapshot.forEach((doc) => {
+          apiLogsSnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
             if (data.timestamp) {
               const timestamp = new Date(data.timestamp).getTime();
