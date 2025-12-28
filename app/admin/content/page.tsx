@@ -33,8 +33,8 @@ export default function ContentPage() {
         );
         const snapshot = await getDocs(q);
         const diaryList = await Promise.all(
-          snapshot.docs.map(async (doc) => {
-            const data = doc.data();
+          snapshot.docs.map(async (docSnap) => {
+            const data = docSnap.data();
             
             // 아이 정보 로드 (childId가 있는 경우)
             let childName = data.childName || "이름 없음";
@@ -52,7 +52,7 @@ export default function ContentPage() {
             }
             
             return {
-              id: doc.id,
+              id: docSnap.id,
               ...data,
               childName, // 아이 이름 추가
             };
