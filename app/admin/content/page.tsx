@@ -38,7 +38,7 @@ export default function ContentPage() {
             
             // 아이 정보 로드 (childId가 있는 경우)
             let childName = data.childName || "이름 없음";
-            if (data.childId && data.userId) {
+            if (data.childId && data.userId && db) {
               try {
                 const childRef = doc(db, "children", `${data.userId}_${data.childId}`);
                 const childSnap = await getDoc(childRef);
