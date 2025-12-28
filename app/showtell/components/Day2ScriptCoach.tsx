@@ -168,3 +168,4 @@ export default function Day2ScriptCoach({ submissionId, onScriptGenerated }: Day
 
 
 
+

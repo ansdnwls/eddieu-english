@@ -293,12 +293,6 @@ export interface ParentProfile {
   updatedAt: string;
 }
 
-// ====================================
-// 코스 타입 (별도 파일로 분리)
-// ====================================
-export * from "./showtell";
-export * from "./writingladder";
-
 // ElevenLabs 음성 관련 타입
 export type VoiceOption = 
   | "rachel_us"   // 🇺🇸 Rachel (여성, 미국) - 명확하고 친절한
@@ -694,42 +688,5 @@ export interface RecurringPaymentResponse {
   amount?: number;
   status?: string;
   error?: string;
-}
-
-// 프로모션/추천인 코드 관련 타입
-export interface PromotionCode {
-  id: string;
-  code: string; // 프로모션 코드 (예: "WELCOME2024", "FRIEND10")
-  name: string; // 프로모션 이름
-  type: "percentage" | "fixed" | "period"; // 할인 유형: 퍼센트, 고정금액, 기간할인
-  discountValue: number; // 할인값 (퍼센트: 10, 20 / 고정금액: 5000, 10000 / 기간: 7, 30)
-  maxUsage: number; // 최대 사용 횟수 (0 = 무제한)
-  currentUsage: number; // 현재 사용 횟수
-  validFrom: string; // 유효 시작일
-  validUntil: string; // 유효 종료일
-  applicablePlans: string[]; // 적용 가능한 플랜 (빈 배열 = 모든 플랜)
-  isActive: boolean; // 활성화 여부
-  createdBy: string; // 생성자 (관리자 UID)
-  createdAt: string;
-  updatedAt: string;
-  description?: string; // 설명
-}
-
-export interface PromotionUsage {
-  id: string;
-  promotionId: string;
-  promotionCode: string;
-  userId: string;
-  userEmail: string;
-  planId: string;
-  planName: string;
-  originalAmount: number; // 원래 금액
-  discountAmount: number; // 할인 금액
-  finalAmount: number; // 최종 결제 금액
-  discountType: "percentage" | "fixed" | "period"; // 할인 유형
-  periodExtension?: number; // 기간 연장 (일 단위)
-  usedAt: string;
-  orderId: string;
-  paymentKey?: string;
 }
 
