@@ -131,7 +131,7 @@ export default function AddChildPage() {
         id: childId,
         childName: formData.childName,
         parentId: user.uid,
-        email: user.email || undefined,
+        email: user.email ?? undefined,
         age: formData.age,
         grade: formData.grade,
         englishLevel: formData.englishLevel,
@@ -156,7 +156,7 @@ export default function AddChildPage() {
         const parentData = {
           parentId: user.uid,
           parentName: parentName.trim(),
-          email: user.email || undefined,
+          email: user.email ?? undefined,
           children: [childId],
           accountType: "parent",
           createdAt: new Date().toISOString(),
