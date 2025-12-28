@@ -146,6 +146,9 @@ export default function ContentPage() {
         return;
       }
 
+      // db를 로컬 변수에 할당하여 TypeScript 타입 체크 통과
+      const firestore = db;
+
       // 해당 일기 정보 가져오기
       const diary = diaries.find((d) => d.id === diaryId);
       if (!diary) {
@@ -157,7 +160,7 @@ export default function ContentPage() {
       const featuredAt = new Date().toISOString();
 
       // 1. 일기에 featured 플래그 설정
-      await updateDoc(doc(db, "diaries", diaryId), {
+      await updateDoc(doc(firestore, "diaries", diaryId), {
         featured: true,
         featuredAt: featuredAt,
       });
@@ -172,10 +175,10 @@ export default function ContentPage() {
         icon: "⭐",
       };
 
-      await addDoc(collection(db, `users/${userId}/badges`), badgeData);
+      await addDoc(collection(firestore, `users/${userId}/badges`), badgeData);
 
       // 3. 알림 생성 (부모가 로그인할 때 볼 수 있도록)
-      const childRef = doc(db, "children", userId);
+      const childRef = doc(firestore, "children", userId);
       const childSnap = await getDoc(childRef);
       let childName = "아이";
       if (childSnap.exists()) {
@@ -194,7 +197,7 @@ export default function ContentPage() {
         relatedDiaryId: diaryId,
       };
 
-      await addDoc(collection(db, `users/${userId}/notifications`), notificationData);
+      await addDoc(collection(firestore, `users/${userId}/notifications`), notificationData);
 
       // 4. 목록 업데이트
       setDiaries((prev) =>
@@ -227,6 +230,9 @@ export default function ContentPage() {
         return;
       }
 
+      // db를 로컬 변수에 할당하여 TypeScript 타입 체크 통과
+      const firestore = db;
+
       // 해당 일기 정보 가져오기
       const diary = diaries.find((d) => d.id === diaryId);
       if (!diary) {
@@ -237,13 +243,13 @@ export default function ContentPage() {
       const userId = diary.userId;
 
       // 1. 일기의 featured 플래그 제거
-      await updateDoc(doc(db, "diaries", diaryId), {
+      await updateDoc(doc(firestore, "diaries", diaryId), {
         featured: false,
         featuredAt: null,
       });
 
       // 2. 사용자의 배지 컬렉션에서 해당 배지 삭제
-      const badgesRef = collection(db, `users/${userId}/badges`);
+      const badgesRef = collection(firestore, `users/${userId}/badges`);
       const badgesQuery = query(
         badgesRef,
         where("type", "==", "featured_diary"),
@@ -252,11 +258,11 @@ export default function ContentPage() {
       const badgesSnapshot = await getDocs(badgesQuery);
       
       badgesSnapshot.forEach(async (badgeDoc) => {
-        await deleteDoc(doc(db, `users/${userId}/badges`, badgeDoc.id));
+        await deleteDoc(doc(firestore, `users/${userId}/badges`, badgeDoc.id));
       });
 
       // 3. 알림 삭제
-      const notificationsRef = collection(db, `users/${userId}/notifications`);
+      const notificationsRef = collection(firestore, `users/${userId}/notifications`);
       const notificationsQuery = query(
         notificationsRef,
         where("type", "==", "badge_awarded"),
@@ -265,7 +271,7 @@ export default function ContentPage() {
       const notificationsSnapshot = await getDocs(notificationsQuery);
       
       notificationsSnapshot.forEach(async (notificationDoc) => {
-        await deleteDoc(doc(db, `users/${userId}/notifications`, notificationDoc.id));
+        await deleteDoc(doc(firestore, `users/${userId}/notifications`, notificationDoc.id));
       });
 
       // 4. 목록 업데이트
@@ -278,7 +284,7 @@ export default function ContentPage() {
       );
 
       // 아이 이름 가져오기
-      const childRef = doc(db, "children", userId);
+      const childRef = doc(firestore, "children", userId);
       const childSnap = await getDoc(childRef);
       let childName = "아이";
       if (childSnap.exists()) {
