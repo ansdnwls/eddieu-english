@@ -35,9 +35,12 @@ export default function AdminCancelRequestsPage() {
         return;
       }
 
+      // db를 로컬 변수에 할당하여 TypeScript 타입 체크 통과
+      const firestore = db;
+
       try {
         // 관리자 확인
-        const adminDoc = await getDoc(doc(db, "admins", user.uid));
+        const adminDoc = await getDoc(doc(firestore, "admins", user.uid));
         if (!adminDoc.exists() || adminDoc.data()?.isAdmin !== true) {
           alert("관리자 권한이 필요합니다.");
           router.push("/dashboard");
@@ -45,7 +48,7 @@ export default function AdminCancelRequestsPage() {
         }
 
         // 모든 취소 요청 로드
-        const requestsQuery = query(collection(db, "penpalCancelRequests"));
+        const requestsQuery = query(collection(firestore, "penpalCancelRequests"));
         const requestsSnapshot = await getDocs(requestsQuery);
         const requestsList: PenpalCancelRequest[] = [];
 
@@ -112,8 +115,11 @@ export default function AdminCancelRequestsPage() {
         return;
       }
 
+      // db를 로컬 변수에 할당하여 TypeScript 타입 체크 통과
+      const firestore = db;
+
       const deletePromises = Array.from(selectedRequests).map((requestId) =>
-        deleteDoc(doc(db, "penpalCancelRequests", requestId))
+        deleteDoc(doc(firestore, "penpalCancelRequests", requestId))
       );
 
       await Promise.all(deletePromises);
@@ -139,9 +145,12 @@ export default function AdminCancelRequestsPage() {
 
     if (!confirmed) return;
 
+    // db를 로컬 변수에 할당하여 TypeScript 타입 체크 통과
+    const firestore = db;
+
     try {
       // 1. 취소 요청 승인
-      await updateDoc(doc(db, "penpalCancelRequests", request.id), {
+      await updateDoc(doc(firestore, "penpalCancelRequests", request.id), {
         status: "approved",
         processedAt: new Date().toISOString(),
         processedBy: user.uid,
@@ -149,7 +158,7 @@ export default function AdminCancelRequestsPage() {
       });
 
       // 2. 매칭 상태를 cancelled로 변경
-      await updateDoc(doc(db, "penpalMatches", request.matchId), {
+      await updateDoc(doc(firestore, "penpalMatches", request.matchId), {
         status: "cancelled",
         cancelledAt: new Date().toISOString(),
         cancelledBy: request.requesterId,
@@ -182,7 +191,7 @@ export default function AdminCancelRequestsPage() {
       });
 
       // 5. 상대방에게 취소 알림 발송
-      await addDoc(collection(db, "letterNotifications"), {
+      await addDoc(collection(firestore, "letterNotifications"), {
         userId: request.partnerId,
         matchId: request.matchId,
         type: "penpal_cancelled",
@@ -198,14 +207,14 @@ export default function AdminCancelRequestsPage() {
 
       // 6. 양쪽 펜팔 프로필을 recruiting 상태로 복원
       const requesterProfileQuery = query(
-        collection(db, "penpalProfiles"),
+        collection(firestore, "penpalProfiles"),
         where("userId", "==", request.requesterId)
       );
       const requesterProfileSnapshot = await getDocs(requesterProfileQuery);
       
       if (!requesterProfileSnapshot.empty) {
         const profileDoc = requesterProfileSnapshot.docs[0];
-        await updateDoc(doc(db, "penpalProfiles", profileDoc.id), {
+        await updateDoc(doc(firestore, "penpalProfiles", profileDoc.id), {
           status: "recruiting",
           updatedAt: new Date().toISOString(),
         });
@@ -213,14 +222,14 @@ export default function AdminCancelRequestsPage() {
       }
 
       const partnerProfileQuery = query(
-        collection(db, "penpalProfiles"),
+        collection(firestore, "penpalProfiles"),
         where("userId", "==", request.partnerId)
       );
       const partnerProfileSnapshot = await getDocs(partnerProfileQuery);
       
       if (!partnerProfileSnapshot.empty) {
         const profileDoc = partnerProfileSnapshot.docs[0];
-        await updateDoc(doc(db, "penpalProfiles", profileDoc.id), {
+        await updateDoc(doc(firestore, "penpalProfiles", profileDoc.id), {
           status: "recruiting",
           updatedAt: new Date().toISOString(),
         });
@@ -250,8 +259,11 @@ export default function AdminCancelRequestsPage() {
 
     if (!reason || reason.trim() === "") return;
 
+    // db를 로컬 변수에 할당하여 TypeScript 타입 체크 통과
+    const firestore = db;
+
     try {
-      await updateDoc(doc(db, "penpalCancelRequests", request.id), {
+      await updateDoc(doc(firestore, "penpalCancelRequests", request.id), {
         status: "rejected",
         rejectionReason: reason.trim(),
         processedAt: new Date().toISOString(),
