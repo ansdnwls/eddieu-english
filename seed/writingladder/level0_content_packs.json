@@ -1,0 +1,380 @@
+[
+  {
+    "content_pack_id": "cp_wl0_w1",
+    "course_id": "writing_ladder_level0",
+    "level": "LEVEL0_SENTENCE",
+    "week": 1,
+    "grade_band": "LOW",
+    "cefr_level": "A1",
+    "topic_id": "wl0.topic.likes",
+    "task_type_id": "writing.sentences",
+    "json": {
+      "title": "Week 1: Things I Like",
+      "description": "Learn to express what you like and why using 'because'",
+      "grammar_focus": "because",
+      "day1": {
+        "write": {
+          "prompt": "Write about something you like!",
+          "guide_questions": [
+            "What do you like?",
+            "Why do you like it?",
+            "How do you feel?"
+          ],
+          "min_words": 20,
+          "max_words": 50,
+          "writing_template": {
+            "type": "sentences",
+            "min_sentences": 3,
+            "max_sentences": 5,
+            "sentence_frames": [
+              "I like ___.",
+              "I like it because ___.",
+              "I feel ___ when I ___.",
+              "It is ___.",
+              "Thank you."
+            ],
+            "required_patterns": ["I like", "because"]
+          },
+          "example_text": "I like drawing. I like it because it is fun. I feel happy when I draw. It is relaxing."
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"],
+          "max_corrections": 2,
+          "focus_grammar": "because",
+          "explain_ko_one_line": true
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hello! I want to tell you about something I like.",
+            "body": ["I like {topic}.", "I like it because {reason}.", "I feel {emotion} when I {action}."],
+            "conclusion": "Thank you!"
+          },
+          "tips": [
+            "Start with 'I like...'",
+            "Use 'because' to give a reason",
+            "End with your feeling"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3,
+          "sentences_to_shadow": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"],
+          "tips_policy": "TWO_TIPS_ONLY",
+          "tips_allowed": ["speed", "pronunciation", "structure"]
+        },
+        "judge": {
+          "question_bank_ref": "wl0.jq.likes.v1",
+          "question_count_low": 3,
+          "question_count_high": 5,
+          "time_limit_seconds": 20
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 1: Things I Like",
+        "card_description": "My first presentation about something I like!",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00Z"
+  },
+  {
+    "content_pack_id": "cp_wl0_w2",
+    "course_id": "writing_ladder_level0",
+    "level": "LEVEL0_SENTENCE",
+    "week": 2,
+    "grade_band": "LOW",
+    "cefr_level": "A1",
+    "topic_id": "wl0.topic.can_have",
+    "task_type_id": "writing.sentences",
+    "json": {
+      "title": "Week 2: I Can / I Have",
+      "description": "Express abilities with 'can' and possessions with 'have'",
+      "grammar_focus": "can_have",
+      "day1": {
+        "write": {
+          "prompt": "Write about what you can do and what you have!",
+          "guide_questions": [
+            "What can you do?",
+            "What do you have?",
+            "How do you practice?"
+          ],
+          "min_words": 20,
+          "max_words": 50,
+          "writing_template": {
+            "type": "sentences",
+            "min_sentences": 3,
+            "max_sentences": 5,
+            "sentence_frames": [
+              "I can ___.",
+              "I have a ___.",
+              "I practice by ___.",
+              "I feel ___ when I ___.",
+              "That is all."
+            ],
+            "required_patterns": ["I can", "I have"]
+          },
+          "example_text": "I can ride a bike. I have a blue helmet. I practice by riding after school. I feel proud when I ride fast."
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"],
+          "max_corrections": 2,
+          "focus_grammar": "can_have",
+          "explain_ko_one_line": true
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hello! Today I will talk about what I can do.",
+            "body": ["I can {ability}.", "I have {possession}.", "I practice by {method}."],
+            "conclusion": "That is all. Thank you!"
+          },
+          "tips": [
+            "Start with 'I can...'",
+            "Tell what you have",
+            "Explain how you practice"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3,
+          "sentences_to_shadow": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"],
+          "tips_policy": "TWO_TIPS_ONLY",
+          "tips_allowed": ["speed", "pronunciation", "structure"]
+        },
+        "judge": {
+          "question_bank_ref": "wl0.jq.can_have.v1",
+          "question_count_low": 3,
+          "question_count_high": 5,
+          "time_limit_seconds": 20
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 2: I Can / I Have",
+        "card_description": "My presentation about my abilities and possessions!",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00Z"
+  },
+  {
+    "content_pack_id": "cp_wl0_w3",
+    "course_id": "writing_ladder_level0",
+    "level": "LEVEL0_SENTENCE",
+    "week": 3,
+    "grade_band": "LOW",
+    "cefr_level": "A1",
+    "topic_id": "wl0.topic.describe_place",
+    "task_type_id": "writing.sentences",
+    "json": {
+      "title": "Week 3: Describe a Place",
+      "description": "Describe places using 'there is' and 'there are'",
+      "grammar_focus": "there_is_are",
+      "day1": {
+        "write": {
+          "prompt": "Write about a place you like!",
+          "guide_questions": [
+            "What place is it?",
+            "What is in the place?",
+            "Why do you like it?"
+          ],
+          "min_words": 20,
+          "max_words": 50,
+          "writing_template": {
+            "type": "sentences",
+            "min_sentences": 3,
+            "max_sentences": 5,
+            "sentence_frames": [
+              "This place is ___.",
+              "There is a ___.",
+              "There are ___ and ___.",
+              "It is ___ because ___.",
+              "I like this place."
+            ],
+            "required_patterns": ["There is", "There are", "because"]
+          },
+          "example_text": "This place is my room. There is a desk. There are books and toys. It is cozy because it is quiet. I like this place."
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"],
+          "max_corrections": 2,
+          "focus_grammar": "there_is_are",
+          "explain_ko_one_line": true
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hello! I will describe a place I like.",
+            "body": ["This place is {place}.", "There is {item1}.", "There are {items}.", "It is {adjective} because {reason}."],
+            "conclusion": "I like this place. Thank you!"
+          },
+          "tips": [
+            "Start with 'This place is...'",
+            "Use 'There is' for one thing",
+            "Use 'There are' for many things"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3,
+          "sentences_to_shadow": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"],
+          "tips_policy": "TWO_TIPS_ONLY",
+          "tips_allowed": ["speed", "pronunciation", "structure"]
+        },
+        "judge": {
+          "question_bank_ref": "wl0.jq.describe_place.v1",
+          "question_count_low": 3,
+          "question_count_high": 5,
+          "time_limit_seconds": 20
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 3: Describe a Place",
+        "card_description": "My presentation about a place I like!",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00Z"
+  },
+  {
+    "content_pack_id": "cp_wl0_w4",
+    "course_id": "writing_ladder_level0",
+    "level": "LEVEL0_SENTENCE",
+    "week": 4,
+    "grade_band": "LOW",
+    "cefr_level": "A1",
+    "topic_id": "wl0.topic.past_mini",
+    "task_type_id": "writing.sentences",
+    "json": {
+      "title": "Week 4: Last Weekend (Mini Past)",
+      "description": "Talk about past events with simple past tense (5 basic verbs)",
+      "grammar_focus": "past_simple_basic",
+      "day1": {
+        "write": {
+          "prompt": "Write about what you did last weekend!",
+          "guide_questions": [
+            "What did you do?",
+            "Where did you go?",
+            "How did you feel?"
+          ],
+          "min_words": 20,
+          "max_words": 50,
+          "writing_template": {
+            "type": "sentences",
+            "min_sentences": 3,
+            "max_sentences": 5,
+            "sentence_frames": [
+              "Last weekend, I went to ___.",
+              "I played ___.",
+              "I ate ___.",
+              "I was ___ because ___.",
+              "It was a good day."
+            ],
+            "required_patterns": ["Last weekend", "went", "played", "ate", "was"]
+          },
+          "example_text": "Last weekend, I went to the park. I played soccer. I ate ice cream. I was happy because I was with my family. It was a good day."
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"],
+          "max_corrections": 2,
+          "focus_grammar": "past_simple_basic",
+          "explain_ko_one_line": true
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hello! I will talk about last weekend.",
+            "body": ["Last weekend, I went to {place}.", "I played {activity}.", "I ate {food}.", "I was {emotion} because {reason}."],
+            "conclusion": "It was a good day. Thank you!"
+          },
+          "tips": [
+            "Start with 'Last weekend...'",
+            "Use past verbs: went, played, ate, was",
+            "Tell how you felt"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3,
+          "sentences_to_shadow": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"],
+          "tips_policy": "TWO_TIPS_ONLY",
+          "tips_allowed": ["speed", "pronunciation", "structure"]
+        },
+        "judge": {
+          "question_bank_ref": "wl0.jq.past_mini.v1",
+          "question_count_low": 3,
+          "question_count_high": 5,
+          "time_limit_seconds": 20
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 4: Last Weekend",
+        "card_description": "My presentation about last weekend!",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00Z"
+  }
+]
+
+

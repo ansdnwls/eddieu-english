@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collection, query, where, getDocs, updateDoc, doc, addDoc } from "firebase/firestore";
 import { db as clientDb } from "@/lib/firebase";
+import { checkPenpalFeature } from "@/lib/apiFeatureFlags";
 
 /**
  * 자동 알림 시스템
@@ -11,6 +12,12 @@ import { db as clientDb } from "@/lib/firebase";
  * Cron Job으로 매일 실행 (Vercel Cron 또는 외부 스케줄러)
  */
 export async function POST(request: NextRequest) {
+  // Feature Flag 확인
+  const featureCheck = checkPenpalFeature();
+  if (!featureCheck.allowed) {
+    return featureCheck.response!;
+  }
+
   try {
     console.log("🔔 편지 인증 확인 작업 시작");
 

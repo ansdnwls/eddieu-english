@@ -27,57 +27,13 @@ export default function VocabularyPage() {
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [childName, setChildName] = useState("");
   const [currentAccountType, setCurrentAccountType] = useState<"child" | "parent">("child");
-  const [currentChildId, setCurrentChildId] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadInitialValues = () => {
-      const accountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
-      if (accountType) {
-        setCurrentAccountType(accountType);
-      }
-      
-      const childId = localStorage.getItem("currentChildId");
-      setCurrentChildId(childId);
-    };
-
-    loadInitialValues();
-
-    // storage 이벤트 리스너 (다른 탭/창에서 변경 감지)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "currentChildId") {
-        setCurrentChildId(e.newValue);
-      }
-      if (e.key === "currentAccountType") {
-        setCurrentAccountType(e.newValue as "child" | "parent" | null);
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-
-    // 같은 탭에서의 변경 감지 (주기적 체크)
-    const interval = setInterval(() => {
-      const childId = localStorage.getItem("currentChildId");
-      const accountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
-      
-      setCurrentChildId((prev) => {
-        if (prev !== childId) {
-          console.log("🔄 currentChildId 변경 감지:", { prev, new: childId });
-          return childId;
-        }
-        return prev;
-      });
-      
-      if (accountType && accountType !== currentAccountType) {
-        console.log("🔄 accountType 변경 감지:", { prev: currentAccountType, new: accountType });
-        setCurrentAccountType(accountType);
-      }
-    }, 200); // 더 자주 체크
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      clearInterval(interval);
-    };
-  }, [currentAccountType]);
+    const accountType = localStorage.getItem("currentAccountType") as "child" | "parent" | null;
+    if (accountType) {
+      setCurrentAccountType(accountType);
+    }
+  }, []);
 
   useEffect(() => {
     const loadVocabulary = async () => {
@@ -86,15 +42,7 @@ export default function VocabularyPage() {
         return;
       }
 
-      setLoading(true); // 로딩 시작
-
       try {
-        console.log("📚 단어장 로딩 시작:", {
-          userId: user.uid,
-          accountType: currentAccountType,
-          childId: currentChildId,
-        });
-
         const q = query(
           collection(db, "diaries"),
           where("userId", "==", user.uid)
@@ -102,11 +50,8 @@ export default function VocabularyPage() {
 
         const snapshot = await getDocs(q);
         const wordMap = new Map<string, VocabularyWord>();
-        let totalDiaries = 0;
-        let filteredDiaries = 0;
 
         snapshot.forEach((doc) => {
-          totalDiaries++;
           const diary = { id: doc.id, ...doc.data() } as DiaryEntry;
           
           // 계정 타입 필터링
@@ -122,27 +67,6 @@ export default function VocabularyPage() {
               return; // 이 일기는 건너뛰기
             }
           }
-          
-          // 아이 모드인 경우 childId 필터링
-          if (currentAccountType === "child" && currentChildId) {
-            const diaryChildId = diary.childId;
-            
-            // childId가 있는 일기만 필터링 (명확한 아이 구분)
-            if (diaryChildId) {
-              // 현재 선택된 아이와 일치하지 않으면 건너뛰기
-              if (diaryChildId !== currentChildId) {
-                return;
-              }
-            }
-            // childId가 없는 기존 데이터는 첫 번째 아이(child1)에게만 표시
-            else {
-              if (currentChildId !== "child1") {
-                return; // child1이 아니면 건너뛰기
-              }
-            }
-          }
-          
-          filteredDiaries++;
           
           if (diary.extractedWords && diary.extractedWords.length > 0) {
             diary.extractedWords.forEach((word) => {
@@ -175,40 +99,13 @@ export default function VocabularyPage() {
           b.count - a.count || a.word.localeCompare(b.word)
         );
 
-        console.log("✅ 단어장 로딩 완료:", {
-          총일기수: totalDiaries,
-          필터된일기수: filteredDiaries,
-          단어수: wordList.length,
-          accountType: currentAccountType,
-          childId: currentChildId,
-        });
-
         setWords(wordList);
 
         // 아이 이름 가져오기
-        if (user && currentAccountType === "child") {
-          if (currentChildId) {
-            // 다중 아이 지원: userId_childId 형식으로 조회
-            const childDocId = `${user.uid}_${currentChildId}`;
-            const childDoc = await getDoc(doc(db, "children", childDocId));
-            if (childDoc.exists()) {
-              const childData = childDoc.data();
-              setChildName(childData.childName || childData.name || "");
-            } else {
-              // 하위 호환성: userId만으로 조회 시도
-              const fallbackDoc = await getDoc(doc(db, "children", user.uid));
-              if (fallbackDoc.exists()) {
-                const childData = fallbackDoc.data();
-                setChildName(childData.childName || childData.name || "");
-              }
-            }
-          } else {
-            // currentChildId가 없으면 userId로 조회
-            const childDoc = await getDoc(doc(db, "children", user.uid));
-            if (childDoc.exists()) {
-              const childData = childDoc.data();
-              setChildName(childData.childName || childData.name || "");
-            }
+        if (user) {
+          const childDoc = await getDoc(doc(db, "children", user.uid));
+          if (childDoc.exists()) {
+            setChildName(childDoc.data().name || "");
           }
         }
       } catch (error) {
@@ -218,11 +115,10 @@ export default function VocabularyPage() {
       }
     };
 
-    console.log("🔄 useEffect 트리거:", { user: !!user, currentAccountType, currentChildId });
     loadVocabulary();
-  }, [user, currentAccountType, currentChildId]); // currentChildId 추가
+  }, [user, currentAccountType]); // currentAccountType 추가
 
-  const handleDownloadVocabularyPDF = async () => {
+  const handleDownloadVocabularyPDF = () => {
     if (words.length === 0) {
       alert("다운로드할 단어가 없습니다.");
       return;
@@ -238,19 +134,8 @@ export default function VocabularyPage() {
         category: w.category,
       }));
 
-      // PDF 생성 (async)
-      const pdf = await generateVocabularyPDF(wordList, childName || "아이");
-      
-      // Blob URL을 사용하여 안전하게 다운로드 (Chrome 보안 경고 해결)
-      const pdfBlob = pdf.output("blob");
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `영어단어_학습장_${new Date().toISOString().split("T")[0]}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const pdf = generateVocabularyPDF(wordList, childName || "아이");
+      pdf.save(`영어단어_학습장_${new Date().toISOString().split("T")[0]}.pdf`);
     } catch (error) {
       console.error("Error generating PDF:", error);
       alert("PDF 생성 중 오류가 발생했습니다.");
@@ -334,7 +219,7 @@ export default function VocabularyPage() {
                   : "작문을 작성하면 단어가 자동으로 추가됩니다!"}
               </p>
               <Link
-                href={currentAccountType === "child" ? "/#upload-section" : "/composition"}
+                href="/"
                 className="inline-block bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:scale-105 transition-all"
               >
                 {currentAccountType === "child" ? "일기 작성하기 →" : "작문 작성하기 →"}
@@ -359,7 +244,7 @@ export default function VocabularyPage() {
                     {categories.map((category) => (
                       <button
                         key={category}
-                        onClick={() => setSelectedCategory(category || null)}
+                        onClick={() => setSelectedCategory(category)}
                         className={`px-4 py-2 rounded-lg font-semibold transition-all ${
                           selectedCategory === category
                             ? "bg-blue-500 text-white"

@@ -44,7 +44,8 @@ export type VoiceOption = keyof typeof VOICE_OPTIONS;
 async function generateVoiceWithElevenLabs(
   text: string,
   voiceId: string,
-  apiKey: string
+  apiKey: string,
+  speed: number = 0.85 // 기본값 0.85 (어린이용 느린 속도)
 ): Promise<Buffer> {
   if (!apiKey) {
     throw new Error("ElevenLabs API 키가 설정되지 않았습니다.");
@@ -54,6 +55,7 @@ async function generateVoiceWithElevenLabs(
     console.log("🎤 ElevenLabs API 호출 시작...");
     console.log("텍스트:", text.substring(0, 50) + "...");
     console.log("음성 ID:", voiceId);
+    console.log("⚡ 속도:", speed);
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
@@ -69,6 +71,7 @@ async function generateVoiceWithElevenLabs(
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.75,
+            speed: speed, // 속도 설정 (0.25 ~ 4.0)
           },
         }),
       }
@@ -94,7 +97,7 @@ async function generateVoiceWithElevenLabs(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { text, voiceOption = "default", userId } = body;
+    const { text, voiceOption = "default", userId, speed = 0.85 } = body; // speed 파라미터 추가 (기본값 0.85 = 느리게)
     
     // userId가 optional이므로 안전하게 처리
     const safeUserId = userId ?? "anonymous";
@@ -114,6 +117,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // speed 검증 (0.25 ~ 4.0)
+    const validSpeed = Math.max(0.25, Math.min(4.0, speed));
 
     // 음성 ID 가져오기
     const voiceId = VOICE_OPTIONS[voiceOption as VoiceOption] || VOICE_OPTIONS.default;
@@ -138,7 +144,8 @@ export async function POST(request: NextRequest) {
       const audioBuffer = await generateVoiceWithElevenLabs(
         text,
         voiceId,
-        apiKeys.elevenlabs
+        apiKeys.elevenlabs,
+        validSpeed // speed 전달
       );
 
       // API 호출 로그 저장 (비동기, 실패해도 API 응답에는 영향 없음)

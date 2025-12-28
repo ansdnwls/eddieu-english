@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
 import Image from "next/image";
@@ -14,6 +14,15 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { DiaryEntry, ChildProfile } from "@/app/types";
 import AddressNotificationBanner from "@/app/components/AddressNotificationBanner";
 import ChildSwitcher from "@/app/components/ChildSwitcher";
+import { isPenpalEnabled } from "@/lib/featureFlags";
+
+interface AdminMessage {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: any;
+  isRead: boolean;
+}
 
 interface ChildInfo {
   childName: string; // 아이 이름
@@ -35,12 +44,18 @@ export default function DashboardPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [badgeCount, setBadgeCount] = useState(0);
-  const [notifications, setNotifications] = useState<unknown[]>([]);
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string }>>([]);
   const [currentAccountType, setCurrentAccountType] = useState<"child" | "parent">("child");
   const [hasParentAccount, setHasParentAccount] = useState(false);
   const [currentChildId, setCurrentChildId] = useState<string | null>(null);
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [canAddMoreChildren, setCanAddMoreChildren] = useState(false);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string>("free");
+  const [usedDiaryCount, setUsedDiaryCount] = useState<number>(0);
+  const [maxDiaryCount, setMaxDiaryCount] = useState<number>(5);
+  const [adminMessages, setAdminMessages] = useState<AdminMessage[]>([]);
+  const [showMessagePopup, setShowMessagePopup] = useState(false);
+  const [currentMessage, setCurrentMessage] = useState<AdminMessage | null>(null);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -112,7 +127,10 @@ export default function DashboardPage() {
 
         console.log("✅ 아이 목록 로딩 완료:", childList);
         setChildren(childList);
-        setCanAddMoreChildren(childList.length < 2);
+        
+        // 구독 플랜에 따른 아이 추가 가능 여부 (나중에 subscriptionPlan과 함께 확인)
+        // 무료/베이직: 1명만, 프리미엄: 3명까지
+        setCanAddMoreChildren(childList.length < 3);
 
         // 현재 선택된 아이 ID 불러오기
         let selectedChildId = localStorage.getItem("currentChildId");
@@ -158,6 +176,122 @@ export default function DashboardPage() {
       loadChildInfo();
     }
   }, [user, router, isAdmin, checkingAdmin]);
+
+  // 구독 정보 로드
+  useEffect(() => {
+    const loadSubscriptionInfo = async () => {
+      if (!user || !db) return;
+
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const plan = userData.subscriptionPlan || "free";
+          setSubscriptionPlan(plan);
+          
+          // 플랜별 최대 첨삭 횟수 설정
+          if (plan === "free") {
+            setMaxDiaryCount(5);
+          } else if (plan === "basic") {
+            setMaxDiaryCount(30);
+          } else if (plan === "premium" || plan === "family") {
+            setMaxDiaryCount(999); // 무제한 (표시용 큰 숫자)
+          }
+        }
+
+        // 이번 달 사용 횟수 조회
+        if (currentChildId) {
+          const now = new Date();
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          
+          const diariesRef = collection(db, "diaries");
+          const q = query(
+            diariesRef,
+            where("userId", "==", user.uid),
+            where("childId", "==", currentChildId)
+          );
+          const snapshot = await getDocs(q);
+          
+          // 이번 달 일기만 카운트
+          const thisMonthCount = snapshot.docs.filter(doc => {
+            const createdAt = new Date(doc.data().createdAt);
+            return createdAt >= startOfMonth;
+          }).length;
+          
+          setUsedDiaryCount(thisMonthCount);
+        }
+      } catch (error) {
+        console.error("❌ 구독 정보 로드 실패:", error);
+      }
+    };
+
+    loadSubscriptionInfo();
+  }, [user, currentChildId]);
+
+  // 관리자 메시지 로드 (로그인 시 팝업)
+  useEffect(() => {
+    const loadAdminMessages = async () => {
+      if (!user || !db) return;
+
+      try {
+        const messagesRef = collection(db, "messages");
+        const q = query(
+          messagesRef,
+          where("userId", "==", user.uid),
+          where("isRead", "==", false)
+        );
+        const snapshot = await getDocs(q);
+        
+        const messages = snapshot.docs.map(doc => ({
+          id: doc.id,
+          title: doc.data().title,
+          content: doc.data().content,
+          createdAt: doc.data().createdAt,
+          isRead: doc.data().isRead,
+        })) as AdminMessage[];
+
+        setAdminMessages(messages);
+        
+        // 읽지 않은 메시지가 있으면 첫 번째 메시지를 팝업으로 표시
+        if (messages.length > 0) {
+          setCurrentMessage(messages[0]);
+          setShowMessagePopup(true);
+        }
+      } catch (error) {
+        console.error("❌ 메시지 로드 실패:", error);
+      }
+    };
+
+    loadAdminMessages();
+  }, [user]);
+
+  // 메시지 읽음 처리
+  const markMessageAsRead = async (messageId: string) => {
+    if (!db) return;
+    
+    try {
+      const messageRef = doc(db, "messages", messageId);
+      await updateDoc(messageRef, {
+        isRead: true,
+      });
+      
+      // 다음 메시지 표시
+      const remainingMessages = adminMessages.filter(m => m.id !== messageId);
+      setAdminMessages(remainingMessages);
+      
+      if (remainingMessages.length > 0) {
+        setCurrentMessage(remainingMessages[0]);
+      } else {
+        setShowMessagePopup(false);
+        setCurrentMessage(null);
+      }
+    } catch (error) {
+      console.error("❌ 메시지 읽음 처리 실패:", error);
+    }
+  };
+
 
   // 배지 개수 및 알림 로드
   useEffect(() => {
@@ -223,95 +357,129 @@ export default function DashboardPage() {
         {/* 주소 입력 알림 배너 */}
         <AddressNotificationBanner />
         
-        {/* 헤더 */}
-        <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm relative z-10">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-                <Image 
-                  src="/icon-192x192.png?v=2" 
-                  alt="EddieU AI 로고" 
-                  width={40} 
-                  height={40}
-                  className="w-full h-full object-cover"
-                  priority
-                />
-              </div>
-              <h1 className="text-xl font-bold text-gray-800 dark:text-white">
-                {currentAccountType === "child" ? "아이 영어일기 AI 첨삭" : "영어 작문 AI 첨삭"}
-              </h1>
-            </Link>
-            <div className="flex items-center gap-3">
-              {/* 아이 전환 버튼 (아이 모드일 때만, 2명 이상일 때만) */}
-              {currentAccountType === "child" && children.length > 1 && (
-                <ChildSwitcher
-                  currentChildId={currentChildId}
-                  onChildChange={(childId) => {
-                    console.log("🔄 아이 전환:", childId);
-                    setCurrentChildId(childId);
-                    localStorage.setItem("currentChildId", childId);
-                    
-                    // 선택된 아이 정보 업데이트
-                    const selectedChild = children.find(c => c.id === childId);
-                    if (selectedChild) {
-                      setChildInfo({
-                        childName: selectedChild.childName,
-                        parentId: selectedChild.parentId,
-                        age: selectedChild.age,
-                        grade: selectedChild.grade,
-                        englishLevel: selectedChild.englishLevel,
-                        arScore: selectedChild.arScore,
-                        avatar: selectedChild.avatar,
-                      });
-                      localStorage.setItem("childInfo", JSON.stringify(selectedChild));
-                      // 페이지 새로고침하여 일기 목록 갱신
-                      window.location.reload();
-                    }
-                  }}
-                />
-              )}
+        {/* 헤더 - 메인과 동일한 메뉴바 */}
+        <header className="sticky top-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="flex items-center justify-between h-16"
+            >
+              {/* 로고 */}
+              <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                  <Image 
+                    src="/icon-192x192.png?v=2" 
+                    alt="EddieU AI 로고" 
+                    width={40} 
+                    height={40}
+                    className="w-full h-full object-cover"
+                    priority
+                  />
+                </div>
+                <div>
+                  <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    EddieU AI
+                  </h1>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
+                    영어일기·작문·스피킹 올인원
+                  </p>
+                </div>
+              </Link>
 
-              {/* 아이 추가 버튼 (최대 2명 제한) */}
-              {currentAccountType === "child" && canAddMoreChildren && (
-                <Link href="/add-child?mode=add">
-                  <motion.button
-                    type="button"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all"
-                  >
-                    <span className="text-lg">👶➕</span>
-                    <span className="text-sm">아이 추가</span>
-                  </motion.button>
-                </Link>
-              )}
-
-              {/* 계정 전환 버튼 */}
-              {hasParentAccount && (
-                <motion.button
-                  type="button"
-                  onClick={() => {
-                    const newType = currentAccountType === "child" ? "parent" : "child";
-                    console.log("🔄 계정 전환:", { from: currentAccountType, to: newType });
-                    setCurrentAccountType(newType);
-                    localStorage.setItem("currentAccountType", newType);
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all"
+              {/* 네비게이션 */}
+              <nav className="flex items-center gap-2 sm:gap-4">
+                <Link
+                  href="/courses"
+                  className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
-                  <span className="text-lg">{currentAccountType === "child" ? "👨‍💼" : "👶"}</span>
-                  <span className="text-sm">{currentAccountType === "child" ? "부모 모드 전환" : "아이 모드 전환"}</span>
-                </motion.button>
-              )}
+                  📚 코스
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  ✍️ 영어일기
+                </Link>
+                <Link
+                  href="/pricing"
+                  className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  요금제
+                </Link>
+                <Link
+                  href="/board"
+                  className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  게시판
+                </Link>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {/* 현재 요금제 표시 버튼 */}
+                  <Link href="/pricing">
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 font-semibold rounded-lg shadow-md hover:shadow-lg transition-all text-sm ${
+                        subscriptionPlan === "free"
+                          ? "bg-gradient-to-r from-gray-500 to-gray-600 text-white"
+                          : subscriptionPlan === "basic"
+                          ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+                          : "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                      }`}
+                    >
+                      <span className="text-base sm:text-lg">
+                        {subscriptionPlan === "free" ? "🆓" : subscriptionPlan === "basic" ? "💙" : "💎"}
+                      </span>
+                      <span className="hidden sm:inline">
+                        {subscriptionPlan === "free" 
+                          ? "무료" 
+                          : subscriptionPlan === "basic"
+                          ? "베이직"
+                          : "프리미엄"
+                        }
+                      </span>
+                    </motion.button>
+                  </Link>
+                  {/* 아이 전환 버튼 (프리미엄만, 2명 이상일 때만) */}
+                  {currentAccountType === "child" && children.length > 1 && (subscriptionPlan === "premium" || subscriptionPlan === "family") && (
+                    <ChildSwitcher
+                      currentChildId={currentChildId}
+                      onChildChange={(childId) => {
+                        console.log("🔄 아이 전환:", childId);
+                        setCurrentChildId(childId);
+                        localStorage.setItem("currentChildId", childId);
+                        
+                        // 선택된 아이 정보 업데이트
+                        const selectedChild = children.find(c => c.id === childId);
+                        if (selectedChild) {
+                          setChildInfo({
+                            childName: selectedChild.childName,
+                            parentId: selectedChild.parentId,
+                            age: selectedChild.age,
+                            grade: selectedChild.grade,
+                            englishLevel: selectedChild.englishLevel,
+                            arScore: selectedChild.arScore,
+                            avatar: selectedChild.avatar,
+                          });
+                          localStorage.setItem("childInfo", JSON.stringify(selectedChild));
+                          // 페이지 새로고침하여 일기 목록 갱신
+                          window.location.reload();
+                        }
+                      }}
+                    />
+                  )}
 
-              <button
-                onClick={handleSignOut}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all"
-              >
-                로그아웃
-              </button>
-            </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              </nav>
+            </motion.div>
           </div>
         </header>
 
@@ -434,78 +602,41 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => router.push("/profile")}
-                  className="mt-4 text-blue-500 hover:text-blue-600 text-sm font-semibold"
-                >
-                  ⚙️ 프로필 수정하기 →
-                </button>
-              </div>
-
-              {/* 메인 기능 버튼 */}
-              <Link href="/#upload-section">
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-6 px-8 rounded-2xl shadow-lg text-center text-xl cursor-pointer"
-                >
-                  📝 영어 일기 첨삭 시작하기
-                </motion.div>
-              </Link>
-
-              {/* 영어작문 첨삭 버튼 */}
-              <Link href="/composition">
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-6 px-8 rounded-2xl shadow-lg text-center text-xl cursor-pointer mt-4"
-                >
-                  ✍️ 영어작문 첨삭 (편지, 에세이 등)
-                </motion.div>
-              </Link>
-
-              {/* 빠른 링크 */}
-              <div className="grid grid-cols-2 gap-4 mt-6">
-                <Link href="/vocabulary">
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg text-center cursor-pointer"
+                <div className="mt-4 flex items-center justify-between">
+                  <button
+                    onClick={() => router.push("/profile")}
+                    className="text-blue-500 hover:text-blue-600 text-sm font-semibold"
                   >
-                    <div className="text-2xl mb-2">📚</div>
-                    <div>단어장</div>
-                  </motion.div>
-                </Link>
-                <Link href="/stats">
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg text-center cursor-pointer"
-                  >
-                    <div className="text-2xl mb-2">📊</div>
-                    <div>성장 통계</div>
-                  </motion.div>
-                </Link>
-                <Link href="/penpal/manage">
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg text-center cursor-pointer"
-                  >
-                    <div className="text-2xl mb-2">✉️</div>
-                    <div>펜팔 관리</div>
-                  </motion.div>
-                </Link>
-                <Link href="/board">
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg text-center cursor-pointer"
-                  >
-                    <div className="text-2xl mb-2">📋</div>
-                    <div>게시판</div>
-                  </motion.div>
-                </Link>
+                    ⚙️ 프로필 수정하기 →
+                  </button>
+                  {/* 부모 모드 전환 버튼 (프리미엄만) */}
+                  {hasParentAccount && (subscriptionPlan === "premium" || subscriptionPlan === "family") && (
+                    <button
+                      onClick={() => {
+                        const newType = currentAccountType === "child" ? "parent" : "child";
+                        console.log("🔄 계정 전환:", { from: currentAccountType, to: newType });
+                        setCurrentAccountType(newType);
+                        localStorage.setItem("currentAccountType", newType);
+                      }}
+                      className="text-blue-500 hover:text-blue-600 text-sm font-semibold"
+                    >
+                      {currentAccountType === "child" ? "👨‍💼 부모모드" : "👶 아이모드"}
+                    </button>
+                  )}
+                  {/* 무료/베이직 사용자가 부모 모드 전환하려고 할 때 */}
+                  {hasParentAccount && (subscriptionPlan === "free" || subscriptionPlan === "basic") && (
+                    <button
+                      onClick={() => {
+                        if (confirm("🔒 부모 모드 전환은 프리미엄 플랜에서만 이용 가능합니다.\n\n프리미엄 플랜에서는 부모 계정과 아이 계정을 자유롭게 전환할 수 있습니다.\n\n요금제 페이지로 이동하시겠습니까?")) {
+                          router.push("/pricing");
+                        }
+                      }}
+                      className="text-gray-400 hover:text-gray-500 text-sm font-semibold"
+                    >
+                      🔒 부모모드
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* 일기 목록 */}
@@ -559,6 +690,53 @@ export default function DashboardPage() {
           )}
         </main>
       </div>
+
+      {/* 관리자 메시지 팝업 */}
+      <AnimatePresence>
+        {showMessagePopup && currentMessage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => currentMessage && markMessageAsRead(currentMessage.id)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="text-3xl">📩</div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+                  {currentMessage.title}
+                </h2>
+              </div>
+              
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-4 mb-4">
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  {currentMessage.content}
+                </p>
+              </div>
+
+              {adminMessages.length > 1 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 text-center">
+                  💡 읽지 않은 메시지 {adminMessages.length}개
+                </p>
+              )}
+
+              <button
+                onClick={() => markMessageAsRead(currentMessage.id)}
+                className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold rounded-lg hover:scale-105 transition-all shadow-lg"
+              >
+                확인
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AuthGuard>
   );
 }

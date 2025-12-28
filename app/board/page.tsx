@@ -4,12 +4,12 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
-import AuthGuard from "@/components/AuthGuard";
 import { collection, getDocs, query, orderBy, where, limit, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Post, PostCategory, POST_CATEGORIES } from "@/app/types";
 import { addSubjectParticle } from "@/app/utils/koreanHelper";
 import Link from "next/link";
+import { isPenpalEnabled } from "@/lib/featureFlags";
 
 function BoardPageContent() {
   const { user } = useAuth();
@@ -180,20 +180,17 @@ function BoardPageContent() {
 
   if (loading) {
     return (
-      <AuthGuard>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">게시글을 불러오는 중...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">게시글을 불러오는 중...</p>
         </div>
-      </AuthGuard>
+      </div>
     );
   }
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-pink-900/20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-pink-900/20">
         {/* 헤더 */}
         <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm">
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -216,12 +213,14 @@ function BoardPageContent() {
               >
                 🏠 홈
               </Link>
-              <Link
-                href={`/board/write${selectedCategory !== "all" ? `?category=${selectedCategory}` : ""}`}
-                className="px-3 sm:px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all text-sm sm:text-base"
-              >
-                ✏️ 글쓰기
-              </Link>
+              {user && (
+                <Link
+                  href={`/board/write${selectedCategory !== "all" ? `?category=${selectedCategory}` : ""}`}
+                  className="px-3 sm:px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all text-sm sm:text-base"
+                >
+                  ✏️ 글쓰기
+                </Link>
+              )}
             </div>
           </div>
         </header>
@@ -245,8 +244,10 @@ function BoardPageContent() {
                 // 공지/미션 카테고리는 사용자 게시판에서 숨김 (공지글은 자동으로 상단에 고정)
                 if (cat.value === "notice_mission") return null;
 
-                // 펜팔은 별도 페이지로 이동
+                // 펜팔은 Feature Flag 확인 후 별도 페이지로 이동 (비활성화 시 숨김)
                 if (cat.value === "penpal") {
+                  if (!isPenpalEnabled()) return null;
+                  
                   return (
                     <Link
                       key={cat.value}
@@ -304,14 +305,16 @@ function BoardPageContent() {
                 게시글이 없습니다
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                첫 번째 게시글을 작성해보세요!
+                {user ? "첫 번째 게시글을 작성해보세요!" : "로그인하고 첫 번째 게시글을 작성해보세요!"}
               </p>
-              <Link
-                href="/board/write"
-                className="inline-block bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:scale-105 transition-all"
-              >
-                글쓰기 →
-              </Link>
+              {user && (
+                <Link
+                  href="/board/write"
+                  className="inline-block bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:scale-105 transition-all"
+                >
+                  글쓰기 →
+                </Link>
+              )}
             </motion.div>
           ) : (
             <div className="space-y-4">
@@ -378,7 +381,6 @@ function BoardPageContent() {
           )}
         </main>
       </div>
-    </AuthGuard>
   );
 }
 

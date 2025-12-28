@@ -400,6 +400,18 @@ function HomeContent() {
             {/* 네비게이션 */}
             <nav className="flex items-center gap-2 sm:gap-4">
               <Link
+                href="/courses"
+                className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                📚 코스
+              </Link>
+              <Link
+                href="/dashboard"
+                className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                ✍️ 영어일기
+              </Link>
+              <Link
                 href="/pricing"
                 className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
               >
@@ -413,12 +425,6 @@ function HomeContent() {
               </Link>
               {user ? (
                 <>
-                  <Link
-                    href="/dashboard"
-                    className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    대시보드
-                  </Link>
                   <button
                     onClick={handleSignOut}
                     className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
@@ -430,15 +436,9 @@ function HomeContent() {
                 <>
                   <Link
                     href="/login"
-                    className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    로그인
-                  </Link>
-                  <Link
-                    href="/signup"
                     className="px-4 sm:px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg hover:scale-105 transition-all"
                   >
-                    시작하기
+                    로그인
                   </Link>
                 </>
               )}
@@ -554,7 +554,7 @@ function HomeContent() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12"
+                    className="flex flex-col items-center justify-center gap-4 mt-12"
                   >
                     {user ? (
                       <Link
@@ -575,10 +575,10 @@ function HomeContent() {
                     ) : (
                       <>
                         <Link
-                          href="/signup"
+                          href="/login"
                           className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-xl hover:shadow-2xl transition-all hover:scale-105"
                         >
-                          <span className="relative z-10">무료로 시작하기</span>
+                          <span className="relative z-10">로그인</span>
                           <motion.span
                             className="ml-2"
                             animate={{ x: [0, 5, 0] }}
@@ -590,10 +590,10 @@ function HomeContent() {
                           <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-purple-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         </Link>
                         <Link
-                          href="/login"
-                          className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-xl hover:border-blue-600 dark:hover:border-blue-500 transition-all"
+                          href="/signup"
+                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                         >
-                          로그인
+                          회원가입
                         </Link>
                       </>
                     )}
@@ -1047,13 +1047,18 @@ function HomeContent() {
               <h3 className="font-semibold text-gray-900 dark:text-white mb-4">서비스</h3>
               <ul className="space-y-2">
                 <li>
-                  <Link href="/board" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                    게시판
+                  <Link href="/courses" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                    코스
                   </Link>
                 </li>
                 <li>
                   <Link href="/dashboard" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                    대시보드
+                    영어일기 첨삭
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/board" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                    게시판
                   </Link>
                 </li>
                 <li>

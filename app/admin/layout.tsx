@@ -7,6 +7,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { isPenpalEnabled } from "@/lib/featureFlags";
 
 export default function AdminLayout({
   children,
@@ -127,11 +128,18 @@ export default function AdminLayout({
                   <AdminNavLink href="/admin/withdrawal" onClick={() => setMobileMenuOpen(false)}>💔 탈퇴 관리</AdminNavLink>
                   <AdminNavLink href="/admin/content" onClick={() => setMobileMenuOpen(false)}>📝 콘텐츠 검토</AdminNavLink>
                   <AdminNavLink href="/admin/board" onClick={() => setMobileMenuOpen(false)}>📋 게시판 관리</AdminNavLink>
-                  <AdminNavLink href="/admin/penpal" onClick={() => setMobileMenuOpen(false)}>✉️ 펜팔 관리</AdminNavLink>
-                  <AdminNavLink href="/admin/penpal/cancel-requests" onClick={() => setMobileMenuOpen(false)}>❌ 취소 요청 관리</AdminNavLink>
-                  <AdminNavLink href="/admin/penpal/disputes" onClick={() => setMobileMenuOpen(false)}>📮 편지 분쟁 처리</AdminNavLink>
+                  {/* 펜팔 관련 메뉴 - Feature Flag로 제어 */}
+                  {isPenpalEnabled() && (
+                    <>
+                      <AdminNavLink href="/admin/penpal" onClick={() => setMobileMenuOpen(false)}>✉️ 펜팔 관리</AdminNavLink>
+                      <AdminNavLink href="/admin/penpal/cancel-requests" onClick={() => setMobileMenuOpen(false)}>❌ 취소 요청 관리</AdminNavLink>
+                      <AdminNavLink href="/admin/penpal/disputes" onClick={() => setMobileMenuOpen(false)}>📮 편지 분쟁 처리</AdminNavLink>
+                    </>
+                  )}
                   <AdminNavLink href="/admin/rewards" onClick={() => setMobileMenuOpen(false)}>🎁 포인트 & 리워드</AdminNavLink>
                   <AdminNavLink href="/admin/ai" onClick={() => setMobileMenuOpen(false)}>🤖 AI 피드백 모니터링</AdminNavLink>
+                  <AdminNavLink href="/admin/pricing" onClick={() => setMobileMenuOpen(false)}>💰 요금제 관리</AdminNavLink>
+                  <AdminNavLink href="/admin/promotions" onClick={() => setMobileMenuOpen(false)}>🎫 프로모션 관리</AdminNavLink>
                   <AdminNavLink href="/admin/support" onClick={() => setMobileMenuOpen(false)}>💌 고객 지원</AdminNavLink>
                   <AdminNavLink href="/admin/settings" onClick={() => setMobileMenuOpen(false)}>⚙️ 설정/도구</AdminNavLink>
                   <AdminNavLink href="/admin/api-keys" onClick={() => setMobileMenuOpen(false)}>🔑 API 키 설정</AdminNavLink>

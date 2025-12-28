@@ -1,0 +1,391 @@
+[
+  {
+    "topic_id": "showtell_week1",
+    "week": 1,
+    "title": "My Favorite Toy",
+    "description": "Share about your favorite toy - what it is, why you like it, and how you play with it.",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Describe physical characteristics of objects",
+        "Express personal preferences and reasons",
+        "Use present tense to talk about habits"
+      ],
+      "key_vocabulary": [
+        "favorite",
+        "toy",
+        "play",
+        "fun",
+        "special",
+        "because",
+        "enjoy"
+      ],
+      "example_sentences": [
+        "My favorite toy is a teddy bear.",
+        "I like it because it's soft and cuddly.",
+        "I play with it every day."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "topic_id": "showtell_week2",
+    "week": 2,
+    "title": "My Pet (or Dream Pet)",
+    "description": "Tell us about your pet or a pet you wish you had. What does it look like? What do you do together?",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Describe animals using adjectives",
+        "Talk about daily routines with pets",
+        "Express wishes and dreams"
+      ],
+      "key_vocabulary": [
+        "pet",
+        "dog",
+        "cat",
+        "fish",
+        "care",
+        "feed",
+        "walk",
+        "cute"
+      ],
+      "example_sentences": [
+        "I have a dog named Max.",
+        "He has brown fur and big eyes.",
+        "I walk him every morning."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "topic_id": "showtell_week3",
+    "week": 3,
+    "title": "My Favorite Food",
+    "description": "Share your favorite food - what it tastes like, when you eat it, and why you love it.",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Use adjectives to describe taste and texture",
+        "Talk about food preferences",
+        "Express reasons for liking something"
+      ],
+      "key_vocabulary": [
+        "delicious",
+        "tasty",
+        "sweet",
+        "spicy",
+        "favorite",
+        "meal",
+        "snack"
+      ],
+      "example_sentences": [
+        "My favorite food is pizza.",
+        "It tastes delicious and cheesy.",
+        "I usually eat it on weekends."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "topic_id": "showtell_week4",
+    "week": 4,
+    "title": "My Best Friend",
+    "description": "Introduce your best friend - what they look like, what you do together, and why they're special.",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Describe people's appearance and personality",
+        "Talk about shared activities",
+        "Express friendship and emotions"
+      ],
+      "key_vocabulary": [
+        "friend",
+        "kind",
+        "funny",
+        "together",
+        "play",
+        "help",
+        "share"
+      ],
+      "example_sentences": [
+        "My best friend is Sarah.",
+        "She is kind and funny.",
+        "We play together every day."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "topic_id": "showtell_week5",
+    "week": 5,
+    "title": "My Favorite Place",
+    "description": "Describe your favorite place - where it is, what it looks like, and what you do there.",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Use location and direction words",
+        "Describe places and surroundings",
+        "Talk about activities at specific places"
+      ],
+      "key_vocabulary": [
+        "place",
+        "park",
+        "beach",
+        "library",
+        "visit",
+        "relax",
+        "enjoy"
+      ],
+      "example_sentences": [
+        "My favorite place is the park near my house.",
+        "It has a big playground and trees.",
+        "I go there to play and relax."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "topic_id": "showtell_week6",
+    "week": 6,
+    "title": "My Hobby",
+    "description": "Share your favorite hobby - what you do, how you do it, and why you enjoy it.",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Talk about hobbies and interests",
+        "Use action verbs for activities",
+        "Express enjoyment and frequency"
+      ],
+      "key_vocabulary": [
+        "hobby",
+        "draw",
+        "read",
+        "play",
+        "practice",
+        "enjoy",
+        "often"
+      ],
+      "example_sentences": [
+        "My hobby is drawing.",
+        "I draw pictures of animals and nature.",
+        "I practice every day after school."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "topic_id": "showtell_week7",
+    "week": 7,
+    "title": "My Family",
+    "description": "Introduce your family members and tell us what makes your family special.",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Talk about family members and relationships",
+        "Describe people's characteristics",
+        "Express love and appreciation"
+      ],
+      "key_vocabulary": [
+        "family",
+        "parent",
+        "sibling",
+        "love",
+        "care",
+        "together",
+        "special"
+      ],
+      "example_sentences": [
+        "I have a mom, a dad, and one sister.",
+        "We like to spend time together.",
+        "My family is special because we help each other."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "topic_id": "showtell_week8",
+    "week": 8,
+    "title": "A Special Day",
+    "description": "Tell us about a special day you remember - what happened, who was there, and why it was special.",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Use past tense to tell stories",
+        "Describe events in sequence",
+        "Express emotions about past experiences"
+      ],
+      "key_vocabulary": [
+        "special",
+        "day",
+        "remember",
+        "happened",
+        "fun",
+        "exciting",
+        "celebrate"
+      ],
+      "example_sentences": [
+        "My birthday last year was very special.",
+        "My friends came to my party.",
+        "We played games and ate cake."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "topic_id": "showtell_week9",
+    "week": 9,
+    "title": "My Dream Job",
+    "description": "Share what you want to be when you grow up and why this job interests you.",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Talk about future plans and dreams",
+        "Use future tense (want to, will)",
+        "Describe job activities and responsibilities"
+      ],
+      "key_vocabulary": [
+        "job",
+        "dream",
+        "future",
+        "want",
+        "become",
+        "help",
+        "work"
+      ],
+      "example_sentences": [
+        "I want to be a teacher when I grow up.",
+        "Teachers help children learn new things.",
+        "I think teaching is important and fun."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "topic_id": "showtell_week10",
+    "week": 10,
+    "title": "My Favorite Season",
+    "description": "Talk about your favorite season - what the weather is like, what you do, and why you like it.",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Describe weather and seasons",
+        "Talk about seasonal activities",
+        "Express preferences with reasons"
+      ],
+      "key_vocabulary": [
+        "season",
+        "spring",
+        "summer",
+        "autumn",
+        "winter",
+        "weather",
+        "enjoy"
+      ],
+      "example_sentences": [
+        "My favorite season is summer.",
+        "The weather is warm and sunny.",
+        "I love going to the beach in summer."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "topic_id": "showtell_week11",
+    "week": 11,
+    "title": "My Favorite Book or Movie",
+    "description": "Share your favorite book or movie - what it's about and why you recommend it.",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Summarize a story or plot",
+        "Express opinions and recommendations",
+        "Use descriptive language for characters and events"
+      ],
+      "key_vocabulary": [
+        "story",
+        "character",
+        "exciting",
+        "interesting",
+        "recommend",
+        "favorite",
+        "enjoy"
+      ],
+      "example_sentences": [
+        "My favorite book is Harry Potter.",
+        "It's about a boy who goes to a magic school.",
+        "I recommend it because it's exciting and fun."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "topic_id": "showtell_week12",
+    "week": 12,
+    "title": "Something I'm Proud Of",
+    "description": "Share something you accomplished or did well - what it was, how you did it, and how you felt.",
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "json": {
+      "learning_objectives": [
+        "Talk about achievements and accomplishments",
+        "Express pride and confidence",
+        "Reflect on personal growth"
+      ],
+      "key_vocabulary": [
+        "proud",
+        "accomplish",
+        "achieve",
+        "succeed",
+        "try",
+        "practice",
+        "improve"
+      ],
+      "example_sentences": [
+        "I am proud of learning to ride a bike.",
+        "I practiced every day for a week.",
+        "Now I can ride without help!"
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  }
+]
+
+
+
+

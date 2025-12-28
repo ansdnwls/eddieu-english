@@ -25,6 +25,8 @@ function PaymentPageContent() {
   const amount = Number(searchParams.get("amount")) || 10000;
   const orderName = searchParams.get("orderName") || "아이 영어일기 AI 첨삭 서비스";
   const orderId = searchParams.get("orderId") || `order_${Date.now()}`;
+  const promoCode = searchParams.get("promoCode") || "";
+  const originalAmount = Number(searchParams.get("originalAmount")) || amount;
   
   const paymentMethodsWidgetRef = useRef<HTMLDivElement>(null);
   const agreementWidgetRef = useRef<HTMLDivElement>(null);
@@ -104,7 +106,7 @@ function PaymentPageContent() {
       const paymentData = await paymentWidget.requestPayment({
         orderId,
         orderName,
-        successUrl: `${window.location.origin}/payment/success?orderId=${orderId}`,
+        successUrl: `${window.location.origin}/payment/success?orderId=${orderId}${promoCode ? `&promoCode=${promoCode}` : ""}${originalAmount !== amount ? `&originalAmount=${originalAmount}` : ""}`,
         failUrl: `${window.location.origin}/payment/fail?orderId=${orderId}`,
         customerEmail: user.email || "",
         customerName: user.displayName || "고객",
@@ -184,8 +186,28 @@ function PaymentPageContent() {
                 <span className="text-gray-600 dark:text-gray-400">주문명</span>
                 <span className="font-semibold text-gray-800 dark:text-white">{orderName}</span>
               </div>
+              
+              {promoCode && originalAmount !== amount && (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-600 dark:text-gray-400">원래 금액</span>
+                    <span className="text-lg line-through text-gray-400 dark:text-gray-600">
+                      {originalAmount.toLocaleString()}원
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-gray-600">
+                    <span className="text-purple-600 dark:text-purple-400 font-semibold">
+                      🎫 프로모션 할인 ({promoCode})
+                    </span>
+                    <span className="text-lg font-bold text-red-500">
+                      -{(originalAmount - amount).toLocaleString()}원
+                    </span>
+                  </div>
+                </>
+              )}
+              
               <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">결제 금액</span>
+                <span className="text-gray-600 dark:text-gray-400 font-semibold">최종 결제 금액</span>
                 <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   {amount.toLocaleString()}원
                 </span>

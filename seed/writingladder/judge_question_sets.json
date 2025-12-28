@@ -1,0 +1,296 @@
+[
+  {
+    "question_set_id": "judge_writingladder_l0_week1",
+    "topic_id": "writingladder_l0_week1",
+    "level": "LEVEL0_SENTENCE",
+    "week": 1,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What food do you like?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "What color do you like?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q3",
+          "text": "What animal do you like?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q4",
+          "text": "What game do you like to play?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q5",
+          "text": "Why do you like it?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q6",
+          "text": "Do you like fruit?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q7",
+          "text": "What is your favorite thing?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q8",
+          "text": "Do you like sports?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q9",
+          "text": "What music do you like?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q10",
+          "text": "Tell me one more thing you like.",
+          "difficulty": "medium",
+          "expected_answer_length": "short"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_writingladder_l0_week2",
+    "topic_id": "writingladder_l0_week2",
+    "level": "LEVEL0_SENTENCE",
+    "week": 2,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What can you do well?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "Can you swim?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q3",
+          "text": "Can you ride a bike?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q4",
+          "text": "What sport can you play?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q5",
+          "text": "What can you do at home?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q6",
+          "text": "Can you speak English?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q7",
+          "text": "What can you cook?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q8",
+          "text": "Can you sing songs?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q9",
+          "text": "What can you draw?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q10",
+          "text": "Tell me one more thing you can do.",
+          "difficulty": "medium",
+          "expected_answer_length": "short"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_writingladder_l0_week3",
+    "topic_id": "writingladder_l0_week3",
+    "level": "LEVEL0_SENTENCE",
+    "week": 3,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What do you have at home?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "Do you have a pet?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q3",
+          "text": "How many books do you have?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q4",
+          "text": "Do you have brothers or sisters?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q5",
+          "text": "What toys do you have?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q6",
+          "text": "Do you have a favorite book?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q7",
+          "text": "What do you have in your room?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q8",
+          "text": "Do you have many friends?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q9",
+          "text": "What games do you have?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q10",
+          "text": "Tell me one more thing you have.",
+          "difficulty": "medium",
+          "expected_answer_length": "short"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_writingladder_l0_week4",
+    "topic_id": "writingladder_l0_week4",
+    "level": "LEVEL0_SENTENCE",
+    "week": 4,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What do you want for your birthday?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "Where do you want to go?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q3",
+          "text": "What do you want to be when you grow up?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q4",
+          "text": "What do you want to learn?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q5",
+          "text": "Do you want a new toy?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q6",
+          "text": "What do you want to eat today?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q7",
+          "text": "What do you want to do this weekend?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q8",
+          "text": "Do you want to visit another country?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q9",
+          "text": "What animal do you want to see?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q10",
+          "text": "Tell me one more thing you want.",
+          "difficulty": "medium",
+          "expected_answer_length": "short"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  }
+]
+
+

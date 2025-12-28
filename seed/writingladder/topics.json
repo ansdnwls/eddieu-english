@@ -1,0 +1,144 @@
+[
+  {
+    "topic_id": "writingladder_l0_week1",
+    "level": "LEVEL0_SENTENCE",
+    "week": 1,
+    "title": "I like... (Things I Like)",
+    "description": "Learn to write simple sentences about things you like using 'I like...'",
+    "grade_band": "MID",
+    "cefr_level": "A1",
+    "json": {
+      "learning_objectives": [
+        "Use 'I like' + noun correctly",
+        "Write simple present tense sentences",
+        "Express personal preferences"
+      ],
+      "key_vocabulary": [
+        "like",
+        "love",
+        "enjoy",
+        "favorite",
+        "food",
+        "color",
+        "animal",
+        "game"
+      ],
+      "example_sentences": [
+        "I like pizza.",
+        "I like blue.",
+        "I like cats.",
+        "I like playing games."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  },
+  {
+    "topic_id": "writingladder_l0_week2",
+    "level": "LEVEL0_SENTENCE",
+    "week": 2,
+    "title": "I can... (Things I Can Do)",
+    "description": "Learn to write simple sentences about abilities using 'I can...'",
+    "grade_band": "MID",
+    "cefr_level": "A1",
+    "json": {
+      "learning_objectives": [
+        "Use 'I can' + verb correctly",
+        "Write about personal abilities",
+        "Use action verbs"
+      ],
+      "key_vocabulary": [
+        "can",
+        "swim",
+        "run",
+        "jump",
+        "read",
+        "write",
+        "draw",
+        "sing"
+      ],
+      "example_sentences": [
+        "I can swim fast.",
+        "I can read books.",
+        "I can draw pictures.",
+        "I can sing songs."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  },
+  {
+    "topic_id": "writingladder_l0_week3",
+    "level": "LEVEL0_SENTENCE",
+    "week": 3,
+    "title": "I have... (Things I Have)",
+    "description": "Learn to write simple sentences about possessions using 'I have...'",
+    "grade_band": "MID",
+    "cefr_level": "A1",
+    "json": {
+      "learning_objectives": [
+        "Use 'I have' + noun correctly",
+        "Write about possessions",
+        "Use plural and singular nouns"
+      ],
+      "key_vocabulary": [
+        "have",
+        "toy",
+        "book",
+        "friend",
+        "family",
+        "pet",
+        "many",
+        "some"
+      ],
+      "example_sentences": [
+        "I have a dog.",
+        "I have many books.",
+        "I have two friends.",
+        "I have a big family."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  },
+  {
+    "topic_id": "writingladder_l0_week4",
+    "level": "LEVEL0_SENTENCE",
+    "week": 4,
+    "title": "I want... (Things I Want)",
+    "description": "Learn to write simple sentences about wishes using 'I want...'",
+    "grade_band": "MID",
+    "cefr_level": "A1",
+    "json": {
+      "learning_objectives": [
+        "Use 'I want' + noun/to + verb correctly",
+        "Write about wishes and desires",
+        "Express future hopes"
+      ],
+      "key_vocabulary": [
+        "want",
+        "wish",
+        "hope",
+        "dream",
+        "toy",
+        "visit",
+        "learn",
+        "become"
+      ],
+      "example_sentences": [
+        "I want a new toy.",
+        "I want to visit the zoo.",
+        "I want to learn English.",
+        "I want to be a teacher."
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  }
+]
+
+

@@ -1,0 +1,316 @@
+[
+  {
+    "content_pack_id": "writingladder_l0_week1",
+    "course_id": "writing_ladder_level0_4w",
+    "level": "LEVEL0_SENTENCE",
+    "week": 1,
+    "grade_band": "MID",
+    "cefr_level": "A1",
+    "topic_id": "writingladder_l0_week1",
+    "task_type_id": "writingladder.sentence",
+    "json": {
+      "title": "Week 1: I like... (Things I Like)",
+      "description": "Learn to write simple sentences about things you like",
+      "day1": {
+        "write": {
+          "prompt": "Write 3-5 simple sentences about things you like. Start each sentence with 'I like...'",
+          "guide_questions": [
+            "What food do you like?",
+            "What color do you like?",
+            "What animal do you like?",
+            "What game do you like?",
+            "What is your favorite thing?"
+          ],
+          "min_words": 15,
+          "max_words": 50
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "sentence_structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 15,
+          "structure_template": {
+            "intro": "Hello! I want to tell you about things I like.",
+            "body": [
+              "Say your sentences one by one",
+              "Speak clearly and slowly",
+              "Smile and make eye contact"
+            ],
+            "conclusion": "Thank you for listening!"
+          },
+          "tips": [
+            "Speak slowly and clearly",
+            "Take a breath between sentences",
+            "Use your voice to show excitement"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "confidence"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_writingladder_l0_week1",
+          "question_count": 5,
+          "time_limit_seconds": 20
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 1: Things I Like",
+        "card_description": "My first simple sentences about things I like",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "writingladder_l0_week2",
+    "course_id": "writing_ladder_level0_4w",
+    "level": "LEVEL0_SENTENCE",
+    "week": 2,
+    "grade_band": "MID",
+    "cefr_level": "A1",
+    "topic_id": "writingladder_l0_week2",
+    "task_type_id": "writingladder.sentence",
+    "json": {
+      "title": "Week 2: I can... (Things I Can Do)",
+      "description": "Learn to write simple sentences about your abilities",
+      "day1": {
+        "write": {
+          "prompt": "Write 3-5 simple sentences about things you can do. Start each sentence with 'I can...'",
+          "guide_questions": [
+            "What can you do well?",
+            "Can you swim?",
+            "Can you ride a bike?",
+            "What sport can you play?",
+            "What can you do at home?"
+          ],
+          "min_words": 15,
+          "max_words": 50
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "sentence_structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 15,
+          "structure_template": {
+            "intro": "Hello! I want to tell you about things I can do.",
+            "body": [
+              "Say your sentences one by one",
+              "Show confidence when you speak",
+              "Use your hands to show actions"
+            ],
+            "conclusion": "Thank you for listening!"
+          },
+          "tips": [
+            "Speak with confidence",
+            "Emphasize the word 'can'",
+            "Show excitement about your abilities"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "confidence"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_writingladder_l0_week2",
+          "question_count": 5,
+          "time_limit_seconds": 20
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 2: Things I Can Do",
+        "card_description": "My sentences about my abilities",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "writingladder_l0_week3",
+    "course_id": "writing_ladder_level0_4w",
+    "level": "LEVEL0_SENTENCE",
+    "week": 3,
+    "grade_band": "MID",
+    "cefr_level": "A1",
+    "topic_id": "writingladder_l0_week3",
+    "task_type_id": "writingladder.sentence",
+    "json": {
+      "title": "Week 3: I have... (Things I Have)",
+      "description": "Learn to write simple sentences about your possessions",
+      "day1": {
+        "write": {
+          "prompt": "Write 3-5 simple sentences about things you have. Start each sentence with 'I have...'",
+          "guide_questions": [
+            "What do you have at home?",
+            "Do you have a pet?",
+            "How many books do you have?",
+            "Do you have brothers or sisters?",
+            "What toys do you have?"
+          ],
+          "min_words": 15,
+          "max_words": 50
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "sentence_structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 15,
+          "structure_template": {
+            "intro": "Hello! I want to tell you about things I have.",
+            "body": [
+              "Say your sentences one by one",
+              "Speak clearly about each thing",
+              "Show happiness about what you have"
+            ],
+            "conclusion": "Thank you for listening!"
+          },
+          "tips": [
+            "Use 'a' or 'an' correctly",
+            "Use numbers when you have more than one",
+            "Speak with pride about what you have"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "confidence"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_writingladder_l0_week3",
+          "question_count": 5,
+          "time_limit_seconds": 20
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 3: Things I Have",
+        "card_description": "My sentences about my possessions",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "writingladder_l0_week4",
+    "course_id": "writing_ladder_level0_4w",
+    "level": "LEVEL0_SENTENCE",
+    "week": 4,
+    "grade_band": "MID",
+    "cefr_level": "A1",
+    "topic_id": "writingladder_l0_week4",
+    "task_type_id": "writingladder.sentence",
+    "json": {
+      "title": "Week 4: I want... (Things I Want)",
+      "description": "Learn to write simple sentences about your wishes",
+      "day1": {
+        "write": {
+          "prompt": "Write 3-5 simple sentences about things you want. Start each sentence with 'I want...' or 'I want to...'",
+          "guide_questions": [
+            "What do you want for your birthday?",
+            "Where do you want to go?",
+            "What do you want to be when you grow up?",
+            "What do you want to learn?",
+            "What do you want to do this weekend?"
+          ],
+          "min_words": 15,
+          "max_words": 50
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "sentence_structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 15,
+          "structure_template": {
+            "intro": "Hello! I want to tell you about things I want.",
+            "body": [
+              "Say your sentences one by one",
+              "Show your dreams and wishes",
+              "Speak with hope and excitement"
+            ],
+            "conclusion": "Thank you for listening!"
+          },
+          "tips": [
+            "Use 'I want' + noun or 'I want to' + verb",
+            "Show excitement about your wishes",
+            "Speak clearly about your dreams"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "confidence"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_writingladder_l0_week4",
+          "question_count": 5,
+          "time_limit_seconds": 20
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 4: Things I Want",
+        "card_description": "My sentences about my wishes and dreams",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-28T00:00:00.000Z"
+  }
+]
+
+

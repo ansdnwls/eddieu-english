@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "create-test-accounts": "node scripts/create-test-account.js"
+    "create-test-accounts": "node scripts/create-test-account.js",
+    "seed-showtell": "node scripts/seed-showtell.js",
+    "seed-writingladder-level0": "node scripts/seed-writingladder-level0.js",
+    "seed-writingladder-level0-high": "node scripts/seed-writingladder-level0-high.js",
+    "test-style-guide": "node scripts/test-style-guide.js"
   },
   "dependencies": {
     "@tosspayments/payment-widget-sdk": "^0.12.1",

@@ -1,670 +1,448 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc, getDoc, where } from "firebase/firestore";
+import { collection, getDocs, query, doc, updateDoc, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { motion } from "framer-motion";
 import AdminLayout from "../layout";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface User {
   id: string;
+  parentId: string;
   email: string;
+  childName: string;
+  age: number;
+  englishLevel: string;
   createdAt?: string;
-  lastLogin?: string;
-  childInfo?: any;
-  diaryCount?: number;
-  featuredCount?: number;
-  subscriptionPlan?: string;
-}
-
-interface UserStats {
-  totalUsers: number;
-  freeUsers: number;
-  paidUsers: number;
-  basicUsers: number;
-  premiumUsers: number;
-  todayNewUsers: number;
-  todayWithdrawals: number;
-  dailyRegistrations: { date: string; count: number }[];
-  dailyWithdrawals: { date: string; count: number }[];
+  diaryCount: number;
+  subscriptionPlan: "free" | "basic" | "premium";
 }
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
-  const [stats, setStats] = useState<UserStats>({
-    totalUsers: 0,
-    freeUsers: 0,
-    paidUsers: 0,
-    basicUsers: 0,
-    premiumUsers: 0,
-    todayNewUsers: 0,
-    todayWithdrawals: 0,
-    dailyRegistrations: [],
-    dailyWithdrawals: [],
-  });
   const [loading, setLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<"stats" | "users" | "children">("stats");
+  const [sortBy, setSortBy] = useState<"date" | "plan">("date");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageTitle, setMessageTitle] = useState("");
+  const [messageContent, setMessageContent] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   useEffect(() => {
-    const loadUsersAndStats = async () => {
-      if (!db) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        console.log("📊 사용자 및 통계 데이터 로딩 중...");
-
-        // 오늘 날짜 (00:00:00)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayTimestamp = today.getTime();
-
-        // 최근 30일 날짜 배열 생성
-        const last30Days: string[] = [];
-        for (let i = 29; i >= 0; i--) {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          date.setHours(0, 0, 0, 0);
-          last30Days.push(date.toISOString().split("T")[0]);
-        }
-
-        // 1. users 컬렉션 로드
-        let usersSnapshot;
-        try {
-          usersSnapshot = await getDocs(collection(db, "users"));
-        } catch (error) {
-          console.log("⚠️ users 컬렉션 없음, children만 사용");
-          usersSnapshot = { docs: [], forEach: () => {} } as any;
-        }
-
-        // 2. children 컬렉션 로드
-        const childrenSnapshot = await getDocs(collection(db, "children"));
-        
-        // 3. 탈퇴 요청 로드
-        let withdrawalsSnapshot;
-        try {
-          withdrawalsSnapshot = await getDocs(collection(db, "withdrawalRequests"));
-        } catch (error) {
-          console.log("⚠️ withdrawalRequests 컬렉션 없음");
-          withdrawalsSnapshot = { docs: [] } as any;
-        }
-
-        // 4. 구독 정보 로드
-        let subscriptionsSnapshot;
-        try {
-          subscriptionsSnapshot = await getDocs(collection(db, "subscriptions"));
-        } catch (error) {
-          console.log("⚠️ subscriptions 컬렉션 없음");
-          subscriptionsSnapshot = { docs: [] } as any;
-        }
-
-        // 구독 정보를 Map으로 변환 (userId -> plan)
-        const subscriptionMap = new Map<string, string>();
-        subscriptionsSnapshot.docs.forEach((doc) => {
-          const data = doc.data();
-          if (data.userId && data.planId) {
-            subscriptionMap.set(data.userId, data.planId);
-          }
-        });
-
-        // users 컬렉션의 구독 정보도 Map에 추가
-        usersSnapshot.docs.forEach((doc) => {
-          const data = doc.data();
-          if (data.subscriptionPlan) {
-            subscriptionMap.set(doc.id, data.subscriptionPlan);
-          }
-        });
-
-        // 통계 초기화
-        const dailyRegistrationsMap = new Map<string, number>();
-        const dailyWithdrawalsMap = new Map<string, number>();
-        last30Days.forEach((date) => {
-          dailyRegistrationsMap.set(date, 0);
-          dailyWithdrawalsMap.set(date, 0);
-        });
-
-        let totalUsers = 0;
-        let freeUsers = 0;
-        let paidUsers = 0;
-        let basicUsers = 0;
-        let premiumUsers = 0;
-        let todayNewUsers = 0;
-        let todayWithdrawals = 0;
-
-        const userList: User[] = [];
-
-        // 일기 데이터 로드
-        const diariesSnapshot = await getDocs(collection(db, "diaries"));
-        const allDiaries = diariesSnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            userId: data.userId,
-            featured: data.featured === true,
-          };
-        });
-
-        // children 컬렉션 처리
-        for (const childDoc of childrenSnapshot.docs) {
-          const childData = childDoc.data();
-          const userId = childDoc.id;
-          totalUsers++;
-
-          // 구독 정보 확인
-          const plan = subscriptionMap.get(userId) || childData.subscriptionPlan || "free";
-          
-          if (plan === "free") {
-            freeUsers++;
-          } else {
-            paidUsers++;
-            if (plan === "basic") basicUsers++;
-            else if (plan === "premium") premiumUsers++;
-          }
-
-          // 가입일 처리
-          let createdAt: string | undefined;
-          if (childData.createdAt) {
-            createdAt = childData.createdAt;
-            const createdDate = new Date(createdAt);
-            createdDate.setHours(0, 0, 0, 0);
-            const dateStr = createdDate.toISOString().split("T")[0];
-            
-            if (dailyRegistrationsMap.has(dateStr)) {
-              dailyRegistrationsMap.set(dateStr, (dailyRegistrationsMap.get(dateStr) || 0) + 1);
-            }
-
-            // 오늘 가입자 확인
-            if (createdDate.getTime() >= todayTimestamp) {
-              todayNewUsers++;
-            }
-          }
-
-          // 일기 수 계산
-          const userDiaries = allDiaries.filter((d) => d.userId === userId);
-          const featuredDiaries = userDiaries.filter((d) => d.featured === true);
-
-          // 이메일 정보 가져오기
-          let userEmail = childData.email || null;
-          if (!userEmail && childData.parentId) {
-            try {
-              const parentRef = doc(db, "parents", childData.parentId);
-              const parentSnap = await getDoc(parentRef);
-              if (parentSnap.exists()) {
-                userEmail = parentSnap.data().email || null;
-              }
-            } catch (err) {
-              console.log("⚠️ Could not fetch parent email:", err);
-            }
-          }
-
-          userList.push({
-            id: userId,
-            email: userEmail || `UID: ${userId.substring(0, 8)}...`,
-            createdAt,
-            lastLogin: childData.lastLogin,
-            childInfo: childData,
-            diaryCount: userDiaries.length,
-            featuredCount: featuredDiaries.length,
-            subscriptionPlan: plan,
-          });
-        }
-
-        // users 컬렉션 처리 (children에 없는 경우)
-        usersSnapshot.docs.forEach((userDoc) => {
-          const userData = userDoc.data();
-          const userId = userDoc.id;
-
-          // children에 이미 있으면 스킵
-          if (userList.find((u) => u.id === userId)) return;
-
-          totalUsers++;
-          const plan = userData.subscriptionPlan || "free";
-          
-          if (plan === "free") {
-            freeUsers++;
-          } else {
-            paidUsers++;
-            if (plan === "basic") basicUsers++;
-            else if (plan === "premium") premiumUsers++;
-          }
-
-          if (userData.createdAt) {
-            const createdDate = new Date(userData.createdAt);
-            createdDate.setHours(0, 0, 0, 0);
-            const dateStr = createdDate.toISOString().split("T")[0];
-            
-            if (dailyRegistrationsMap.has(dateStr)) {
-              dailyRegistrationsMap.set(dateStr, (dailyRegistrationsMap.get(dateStr) || 0) + 1);
-            }
-
-            if (createdDate.getTime() >= todayTimestamp) {
-              todayNewUsers++;
-            }
-          }
-
-          // 일기 수 계산 (users 컬렉션의 경우)
-          const userDiaries = allDiaries.filter((d) => d.userId === userId);
-          const featuredDiaries = userDiaries.filter((d) => d.featured === true);
-
-          userList.push({
-            id: userId,
-            email: userData.email || `UID: ${userId.substring(0, 8)}...`,
-            createdAt: userData.createdAt,
-            lastLogin: userData.lastLogin,
-            subscriptionPlan: plan,
-            diaryCount: userDiaries.length,
-            featuredCount: featuredDiaries.length,
-          });
-        });
-
-        // 탈퇴 요청 처리
-        withdrawalsSnapshot.docs.forEach((withdrawalDoc) => {
-          const withdrawalData = withdrawalDoc.data();
-          if (withdrawalData.withdrawnAt) {
-            const withdrawalDate = new Date(withdrawalData.withdrawnAt);
-            withdrawalDate.setHours(0, 0, 0, 0);
-            const dateStr = withdrawalDate.toISOString().split("T")[0];
-            
-            if (dailyWithdrawalsMap.has(dateStr)) {
-              dailyWithdrawalsMap.set(dateStr, (dailyWithdrawalsMap.get(dateStr) || 0) + 1);
-            }
-
-            if (withdrawalDate.getTime() >= todayTimestamp) {
-              todayWithdrawals++;
-            }
-          }
-        });
-
-        // 통계 데이터 변환
-        const dailyRegistrations = last30Days.map((date) => ({
-          date,
-          count: dailyRegistrationsMap.get(date) || 0,
-        }));
-
-        const dailyWithdrawals = last30Days.map((date) => ({
-          date,
-          count: dailyWithdrawalsMap.get(date) || 0,
-        }));
-
-        setUsers(userList);
-        setStats({
-          totalUsers,
-          freeUsers,
-          paidUsers,
-          basicUsers,
-          premiumUsers,
-          todayNewUsers,
-          todayWithdrawals,
-          dailyRegistrations,
-          dailyWithdrawals,
-        });
-
-        console.log("✅ 사용자 및 통계 데이터 로딩 완료:", {
-          totalUsers,
-          freeUsers,
-          paidUsers,
-          todayNewUsers,
-          todayWithdrawals,
-        });
-      } catch (error) {
-        console.error("❌ 데이터 로딩 오류:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUsersAndStats();
+    loadUsers();
   }, []);
 
-  const handleBlockUser = async (userId: string) => {
-    if (!confirm("정말 이 사용자를 차단하시겠습니까?")) return;
+  const loadUsers = async () => {
+    if (!db) {
+      setLoading(false);
+      return;
+    }
 
     try {
-      // Firestore에 차단 정보 저장
-      await updateDoc(doc(db, "children", userId), {
-        blocked: true,
-        blockedAt: new Date().toISOString(),
-      });
+      console.log("📊 Loading users from Firestore...");
       
-      alert("사용자가 차단되었습니다.");
-      // 목록 새로고침
-      window.location.reload();
+      // children 컬렉션에서 모든 아이 정보 로드
+      const childrenSnapshot = await getDocs(collection(db, "children"));
+      console.log("👥 Total children documents:", childrenSnapshot.size);
+      
+      // 모든 일기 한 번에 로드
+      const diariesSnapshot = await getDocs(collection(db, "diaries"));
+      const allDiaries = diariesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        userId: doc.data().userId,
+      }));
+      
+      console.log("📝 Total diaries:", allDiaries.length);
+
+      const userList: User[] = [];
+
+      for (const childDoc of childrenSnapshot.docs) {
+        const childData = childDoc.data();
+        
+        // 해당 아이의 일기 수 계산
+        const userDiaries = allDiaries.filter(d => d.userId === childDoc.id);
+        
+        // 이메일 정보 가져오기
+        let userEmail = childData.email || "";
+        
+        if (!userEmail && childData.parentId) {
+          try {
+            const parentRef = doc(db, "parents", childData.parentId);
+            const parentSnap = await getDoc(parentRef);
+            if (parentSnap.exists()) {
+              userEmail = parentSnap.data().email || "";
+            }
+          } catch (err) {
+            console.log("⚠️ Could not fetch parent email:", err);
+          }
+        }
+
+        // 구독 플랜 정보 가져오기
+        let subscriptionPlan: "free" | "basic" | "premium" = "free";
+        if (childData.parentId) {
+          try {
+            const userDocRef = doc(db, "users", childData.parentId);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              subscriptionPlan = userData.subscriptionPlan || "free";
+            }
+          } catch (err) {
+            console.log("⚠️ Could not fetch subscription plan:", err);
+          }
+        }
+
+        userList.push({
+          id: childDoc.id,
+          parentId: childData.parentId,
+          email: userEmail || `UID: ${childDoc.id.substring(0, 8)}...`,
+          childName: childData.childName || "-",
+          age: childData.age || 0,
+          englishLevel: childData.englishLevel || "Lv.1",
+          createdAt: childData.createdAt,
+          diaryCount: userDiaries.length,
+          subscriptionPlan,
+        });
+      }
+
+      console.log("✅ Loaded users:", userList.length);
+      setUsers(userList);
     } catch (error) {
-      console.error("Error blocking user:", error);
-      alert("차단 중 오류가 발생했습니다.");
+      console.error("❌ Error loading users:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 정렬된 사용자 목록
+  const sortedUsers = [...users].sort((a, b) => {
+    if (sortBy === "plan") {
+      const planOrder = { premium: 0, basic: 1, free: 2 };
+      return planOrder[a.subscriptionPlan] - planOrder[b.subscriptionPlan];
+    } else {
+      // 날짜순 (최신순)
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    }
+  });
+
+  // 사용자 선택/해제
+  const toggleUserSelection = (userId: string) => {
+    const newSelected = new Set(selectedUsers);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedUsers(newSelected);
+  };
+
+  // 전체 선택/해제
+  const toggleSelectAll = () => {
+    if (selectedUsers.size === users.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(users.map(u => u.id)));
+    }
+  };
+
+  // 메시지 발송
+  const handleSendMessage = async () => {
+    if (!messageTitle.trim() || !messageContent.trim()) {
+      alert("제목과 내용을 모두 입력해주세요.");
+      return;
+    }
+
+    if (selectedUsers.size === 0) {
+      alert("메시지를 받을 사용자를 선택해주세요.");
+      return;
+    }
+
+    setSendingMessage(true);
+    try {
+      if (!db) throw new Error("Firestore not initialized");
+
+      // 선택된 사용자들에게 메시지 저장
+      const promises = Array.from(selectedUsers).map(async (userId) => {
+        const user = users.find(u => u.id === userId);
+        if (!user) return;
+
+        // messages 컬렉션에 저장 (parentId 기준)
+        await addDoc(collection(db, "messages"), {
+          userId: user.parentId, // 부모 ID로 저장
+          childId: userId, // 아이 ID
+          title: messageTitle,
+          content: messageContent,
+          type: "admin",
+          isRead: false,
+          createdAt: serverTimestamp(),
+        });
+      });
+
+      await Promise.all(promises);
+      
+      alert(`✅ ${selectedUsers.size}명에게 메시지를 발송했습니다.`);
+      setShowMessageModal(false);
+      setMessageTitle("");
+      setMessageContent("");
+      setSelectedUsers(new Set());
+    } catch (error) {
+      console.error("❌ 메시지 발송 실패:", error);
+      alert("메시지 발송 중 오류가 발생했습니다.");
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // 플랜 아이콘 및 색상
+  const getPlanBadge = (plan: "free" | "basic" | "premium") => {
+    switch (plan) {
+      case "premium":
+        return (
+          <span className="px-2 py-1 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 text-xs font-bold rounded-full border border-purple-300 dark:border-purple-700">
+            💎 프리미엄
+          </span>
+        );
+      case "basic":
+        return (
+          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold rounded-full border border-blue-300 dark:border-blue-700">
+            💙 베이직
+          </span>
+        );
+      default:
+        return (
+          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-bold rounded-full border border-gray-300 dark:border-gray-600">
+            🆓 무료
+          </span>
+        );
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">로딩 중...</p>
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">로딩 중...</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
-
-  // 그래프 최대값 계산
-  const maxRegistrations = Math.max(...stats.dailyRegistrations.map((d) => d.count), 1);
-  const maxWithdrawals = Math.max(...stats.dailyWithdrawals.map((d) => d.count), 1);
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-          👨‍👩‍👧 유저/아이 관리
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+            👨‍👩‍👧 유저/아이 관리
+          </h1>
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            총 {users.length}명
+          </div>
+        </div>
 
-      {/* 탭 */}
-      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
-        <button
-          onClick={() => setSelectedTab("stats")}
-          className={`px-4 py-2 font-semibold transition-all ${
-            selectedTab === "stats"
-              ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-          }`}
-        >
-          📊 통계
-        </button>
-        <button
-          onClick={() => setSelectedTab("users")}
-          className={`px-4 py-2 font-semibold transition-all ${
-            selectedTab === "users"
-              ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-          }`}
-        >
-          유저 목록
-        </button>
-        <button
-          onClick={() => setSelectedTab("children")}
-          className={`px-4 py-2 font-semibold transition-all ${
-            selectedTab === "children"
-              ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-          }`}
-        >
-          아이 목록
-        </button>
-      </div>
-
-      {/* 통계 탭 */}
-      {selectedTab === "stats" && (
-        <div className="space-y-6">
-          {/* 요약 카드 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white"
+        {/* 필터 및 액션 */}
+        <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              정렬:
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "date" | "plan")}
+              className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
             >
-              <div className="text-sm opacity-90 mb-2">총 사용자수</div>
-              <div className="text-3xl font-bold">{stats.totalUsers.toLocaleString()}</div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl shadow-lg p-6 text-white"
-            >
-              <div className="text-sm opacity-90 mb-2">무료</div>
-              <div className="text-3xl font-bold">{stats.freeUsers.toLocaleString()}</div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white"
-            >
-              <div className="text-sm opacity-90 mb-2">유료</div>
-              <div className="text-3xl font-bold">{stats.paidUsers.toLocaleString()}</div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-gradient-to-br from-blue-400 to-blue-500 rounded-xl shadow-lg p-6 text-white"
-            >
-              <div className="text-sm opacity-90 mb-2">베이직</div>
-              <div className="text-3xl font-bold">{stats.basicUsers.toLocaleString()}</div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white"
-            >
-              <div className="text-sm opacity-90 mb-2">프리미엄</div>
-              <div className="text-3xl font-bold">{stats.premiumUsers.toLocaleString()}</div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white"
-            >
-              <div className="text-sm opacity-90 mb-2">금일 신규</div>
-              <div className="text-3xl font-bold">{stats.todayNewUsers.toLocaleString()}</div>
-            </motion.div>
+              <option value="date">가입일순</option>
+              <option value="plan">플랜별</option>
+            </select>
           </div>
 
-          {/* 날짜별 등록현황 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
-          >
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
-              📈 날짜별 등록현황 (최근 30일)
-            </h2>
-            <div className="space-y-2">
-              {stats.dailyRegistrations.map((day, index) => {
-                const date = new Date(day.date);
-                const dateLabel = `${date.getMonth() + 1}/${date.getDate()}`;
-                const percentage = maxRegistrations > 0 ? (day.count / maxRegistrations) * 100 : 0;
-                
-                return (
-                  <div key={day.date} className="flex items-center gap-3">
-                    <div className="w-20 text-xs text-gray-600 dark:text-gray-400 text-right">
-                      {dateLabel}
-                    </div>
-                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6 relative overflow-hidden">
-                      <div
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2"
-                        style={{ width: `${percentage}%` }}
-                      >
-                        {day.count > 0 && (
-                          <span className="text-xs text-white font-bold">{day.count}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
+          <div className="flex-1"></div>
 
-          {/* 날짜별 탈퇴현황 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
-          >
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
-              📉 날짜별 탈퇴현황 (최근 30일)
-            </h2>
-            <div className="space-y-2">
-              {stats.dailyWithdrawals.map((day, index) => {
-                const date = new Date(day.date);
-                const dateLabel = `${date.getMonth() + 1}/${date.getDate()}`;
-                const percentage = maxWithdrawals > 0 ? (day.count / maxWithdrawals) * 100 : 0;
-                
-                return (
-                  <div key={day.date} className="flex items-center gap-3">
-                    <div className="w-20 text-xs text-gray-600 dark:text-gray-400 text-right">
-                      {dateLabel}
-                    </div>
-                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6 relative overflow-hidden">
-                      <div
-                        className="bg-gradient-to-r from-red-500 to-red-600 h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2"
-                        style={{ width: `${percentage}%` }}
-                      >
-                        {day.count > 0 && (
-                          <span className="text-xs text-white font-bold">{day.count}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {selectedUsers.size}명 선택
+            </span>
+            <button
+              onClick={() => setShowMessageModal(true)}
+              disabled={selectedUsers.size === 0}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                selectedUsers.size === 0
+                  ? "bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:scale-105 shadow-lg"
+              }`}
+            >
+              💌 메시지 발송
+            </button>
+          </div>
         </div>
-      )}
 
-        {/* 유저 목록 */}
-        {selectedTab === "users" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      이메일
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      가입일
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      요금제
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      일기 수
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      액션
-                    </th>
+        {/* 사용자 목록 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-4 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.size === users.length && users.length > 0}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    아이 이름
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    이메일
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    나이
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    레벨
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    플랜
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    일기 수
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    가입일
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {sortedUsers.map((user) => (
+                  <tr
+                    key={user.id}
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+                      selectedUsers.has(user.id) ? "bg-blue-50 dark:bg-blue-900/20" : ""
+                    }`}
+                  >
+                    <td className="px-4 py-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.has(user.id)}
+                        onChange={() => toggleUserSelection(user.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {user.childName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      {user.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      {user.age}세
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-xs font-medium">
+                        {user.englishLevel}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getPlanBadge(user.subscriptionPlan)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      {user.diaryCount}개
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {user.createdAt
+                        ? new Date(user.createdAt).toLocaleDateString("ko-KR")
+                        : "-"}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {users.map((user) => {
-                    const planLabel = user.subscriptionPlan === "basic" ? "베이직" 
-                      : user.subscriptionPlan === "premium" ? "프리미엄" 
-                      : "무료";
-                    const planColor = user.subscriptionPlan === "basic" ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                      : user.subscriptionPlan === "premium" ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400";
-                    
-                    return (
-                      <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                          {user.email}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {user.createdAt
-                            ? new Date(user.createdAt).toLocaleDateString("ko-KR")
-                            : "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${planColor}`}>
-                            {planLabel}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {user.diaryCount || 0}개
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() => handleBlockUser(user.id)}
-                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                          >
-                            차단
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-        )}
-
-        {/* 아이 목록 */}
-        {selectedTab === "children" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      이름
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      나이
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      레벨
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      일기 수
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      오늘의 일기 선정
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {users
-                    .filter((user) => user.childInfo)
-                    .map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                          {user.childInfo?.childName || "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {user.childInfo?.age || "-"}세
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
-                            {user.childInfo?.englishLevel || "Lv.1"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {user.diaryCount || 0}개
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded font-semibold">
-                            ⭐ {user.featuredCount || 0}회
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-        )}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
       </div>
+
+      {/* 메시지 발송 모달 */}
+      <AnimatePresence>
+        {showMessageModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowMessageModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl"
+            >
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+                💌 메시지 발송
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                선택된 {selectedUsers.size}명에게 메시지를 발송합니다.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    제목 *
+                  </label>
+                  <input
+                    type="text"
+                    value={messageTitle}
+                    onChange={(e) => setMessageTitle(e.target.value)}
+                    placeholder="메시지 제목을 입력하세요"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    내용 *
+                  </label>
+                  <textarea
+                    value={messageContent}
+                    onChange={(e) => setMessageContent(e.target.value)}
+                    placeholder="메시지 내용을 입력하세요"
+                    rows={6}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowMessageModal(false)}
+                  className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleSendMessage}
+                  disabled={sendingMessage || !messageTitle.trim() || !messageContent.trim()}
+                  className={`flex-1 px-4 py-3 font-bold rounded-lg transition-all ${
+                    sendingMessage || !messageTitle.trim() || !messageContent.trim()
+                      ? "bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
+                      : "bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:scale-105 shadow-lg"
+                  }`}
+                >
+                  {sendingMessage ? "발송 중..." : "발송하기"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AdminLayout>
   );
 }

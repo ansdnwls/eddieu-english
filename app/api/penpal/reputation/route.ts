@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { UserPenpalReputation } from "@/app/types";
+import { checkPenpalFeature } from "@/lib/apiFeatureFlags";
 
 export async function GET(request: NextRequest) {
+  // Feature Flag 확인
+  const featureCheck = checkPenpalFeature();
+  if (!featureCheck.allowed) {
+    return featureCheck.response!;
+  }
+
   try {
     if (!db) {
       return NextResponse.json(
@@ -71,6 +78,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Feature Flag 확인
+  const featureCheck = checkPenpalFeature();
+  if (!featureCheck.allowed) {
+    return featureCheck.response!;
+  }
+
   try {
     if (!db) {
       return NextResponse.json(

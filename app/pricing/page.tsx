@@ -5,8 +5,9 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
-import { collection, getDocs, query, orderBy, where, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, where, onSnapshot, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { PromotionCode } from "@/app/types";
 
 interface PricingPlan {
   id: string;
@@ -26,6 +27,10 @@ export default function PricingPage() {
   const { user } = useAuth();
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<PromotionCode | null>(null);
+  const [promoError, setPromoError] = useState("");
+  const [checkingPromo, setCheckingPromo] = useState(false);
 
   useEffect(() => {
     if (!db) {
@@ -126,6 +131,92 @@ export default function PricingPage() {
 
     return () => unsubscribe();
   }, [db]);
+
+  // 프로모션 코드 검증
+  const checkPromoCode = async () => {
+    if (!promoCode.trim()) {
+      setPromoError("프로모션 코드를 입력해주세요.");
+      return;
+    }
+
+    setCheckingPromo(true);
+    setPromoError("");
+    setAppliedPromo(null);
+
+    try {
+      if (!db) throw new Error("데이터베이스 연결 실패");
+
+      const firestoreDb = db as NonNullable<typeof db>;
+      const promotionsRef = collection(firestoreDb, "promotions");
+      const q = query(
+        promotionsRef,
+        where("code", "==", promoCode.toUpperCase()),
+        where("isActive", "==", true)
+      );
+      
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        setPromoError("유효하지 않은 프로모션 코드입니다.");
+        return;
+      }
+
+      const promoData = snapshot.docs[0].data() as PromotionCode;
+      const promo = { ...promoData, id: snapshot.docs[0].id };
+
+      // 유효 기간 확인
+      const now = new Date();
+      const validFrom = new Date(promo.validFrom);
+      const validUntil = new Date(promo.validUntil);
+
+      if (now < validFrom) {
+        setPromoError("아직 사용할 수 없는 프로모션 코드입니다.");
+        return;
+      }
+
+      if (now > validUntil) {
+        setPromoError("만료된 프로모션 코드입니다.");
+        return;
+      }
+
+      // 사용 횟수 확인
+      if (promo.maxUsage > 0 && promo.currentUsage >= promo.maxUsage) {
+        setPromoError("사용 횟수가 초과된 프로모션 코드입니다.");
+        return;
+      }
+
+      setAppliedPromo(promo);
+      
+      // 프로모션 코드를 localStorage에 저장 (결제 시 사용)
+      localStorage.setItem("appliedPromoCode", promoCode.toUpperCase());
+      localStorage.setItem("appliedPromoData", JSON.stringify(promo));
+      
+      alert(`✅ 프로모션 코드가 적용되었습니다!\n${getPromoDiscountText(promo)}`);
+    } catch (error) {
+      console.error("❌ 프로모션 코드 검증 실패:", error);
+      setPromoError("프로모션 코드 확인 중 오류가 발생했습니다.");
+    } finally {
+      setCheckingPromo(false);
+    }
+  };
+
+  const getPromoDiscountText = (promo: PromotionCode) => {
+    if (promo.type === "percentage") return `${promo.discountValue}% 할인`;
+    if (promo.type === "fixed") return `${promo.discountValue.toLocaleString()}원 할인`;
+    return `${promo.discountValue}일 무료 연장`;
+  };
+
+  const calculateDiscountedPrice = (originalPrice: number, promo: PromotionCode | null) => {
+    if (!promo || originalPrice === 0) return originalPrice;
+    
+    if (promo.type === "percentage") {
+      return Math.floor(originalPrice * (1 - promo.discountValue / 100));
+    }
+    if (promo.type === "fixed") {
+      return Math.max(0, originalPrice - promo.discountValue);
+    }
+    return originalPrice; // period 타입은 가격 변경 없음
+  };
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -228,14 +319,78 @@ export default function PricingPage() {
           </div>
         ) : (
           /* 요금제 카드 */
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
-            {plans.map((plan, index) => {
-              // 버튼 링크 생성
-              const buttonLink = plan.price === 0
-                ? (user ? "/dashboard" : "/signup")
-                : `/payment?amount=${plan.price}&orderName=${encodeURIComponent(plan.name)} 플랜&orderId=${plan.orderId}`;
+          <>
+            {/* 프로모션 코드 입력 섹션 */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="max-w-2xl mx-auto mb-12"
+            >
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 border-2 border-purple-200 dark:border-purple-800">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-2xl">🎫</span>
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-white">
+                    프로모션 코드가 있으신가요?
+                  </h3>
+                </div>
+                
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="프로모션 코드 입력"
+                    className="flex-1 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 font-mono"
+                    disabled={checkingPromo || !!appliedPromo}
+                  />
+                  <button
+                    onClick={checkPromoCode}
+                    disabled={checkingPromo || !!appliedPromo}
+                    className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                      appliedPromo
+                        ? "bg-green-500 text-white cursor-default"
+                        : checkingPromo
+                        ? "bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-wait"
+                        : "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:scale-105 shadow-lg"
+                    }`}
+                  >
+                    {appliedPromo ? "✓ 적용됨" : checkingPromo ? "확인 중..." : "적용"}
+                  </button>
+                </div>
 
-              return (
+                {promoError && (
+                  <p className="mt-3 text-sm text-red-600 dark:text-red-400">
+                    ❌ {promoError}
+                  </p>
+                )}
+
+                {appliedPromo && (
+                  <div className="mt-3 bg-white dark:bg-gray-800 rounded-lg p-3">
+                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+                      ✅ {appliedPromo.name}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {getPromoDiscountText(appliedPromo)}
+                      {appliedPromo.type === "period" && " (결제 후 자동 적용)"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            <div className="grid md:grid-cols-3 gap-8 mb-16">
+              {plans.map((plan, index) => {
+                const discountedPrice = calculateDiscountedPrice(plan.price, appliedPromo);
+                const hasDiscount = appliedPromo && plan.price > 0 && appliedPromo.type !== "period";
+                
+                // 버튼 링크 생성 (할인 적용)
+                const finalPrice = discountedPrice;
+                const buttonLink = plan.price === 0
+                  ? (user ? "/dashboard" : "/signup")
+                  : `/payment?amount=${finalPrice}&originalAmount=${plan.price}&orderName=${encodeURIComponent(plan.name)} 플랜&orderId=${plan.orderId}${appliedPromo ? `&promoCode=${appliedPromo.code}` : ""}`;
+
+                return (
             <motion.div
               key={plan.name}
               initial={{ opacity: 0, y: 20 }}
@@ -262,21 +417,44 @@ export default function PricingPage() {
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
                   {plan.description}
                 </p>
-                <div className="flex items-baseline justify-center gap-2">
-                  <span className="text-5xl font-bold text-gray-900 dark:text-white">
-                    {plan.price === 0 ? "무료" : plan.price.toLocaleString()}
-                  </span>
-                  {plan.price > 0 && (
-                    <>
-                      <span className="text-2xl text-gray-600 dark:text-gray-400">
-                        원
+                
+                {hasDiscount ? (
+                  <div className="space-y-2">
+                    <div className="flex items-baseline justify-center gap-2">
+                      <span className="text-3xl line-through text-gray-400 dark:text-gray-600">
+                        {plan.price.toLocaleString()}
                       </span>
-                      <span className="text-gray-600 dark:text-gray-400">
-                        /{plan.period}
+                      <span className="text-sm text-red-500 font-semibold">
+                        {getPromoDiscountText(appliedPromo!)}
                       </span>
-                    </>
-                  )}
-                </div>
+                    </div>
+                    <div className="flex items-baseline justify-center gap-2">
+                      <span className="text-5xl font-bold text-purple-600 dark:text-purple-400">
+                        {discountedPrice.toLocaleString()}
+                      </span>
+                      <span className="text-2xl text-gray-600 dark:text-gray-400">원</span>
+                      <span className="text-gray-600 dark:text-gray-400">/{plan.period}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline justify-center gap-2">
+                    <span className="text-5xl font-bold text-gray-900 dark:text-white">
+                      {plan.price === 0 ? "무료" : plan.price.toLocaleString()}
+                    </span>
+                    {plan.price > 0 && (
+                      <>
+                        <span className="text-2xl text-gray-600 dark:text-gray-400">원</span>
+                        <span className="text-gray-600 dark:text-gray-400">/{plan.period}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                
+                {appliedPromo && appliedPromo.type === "period" && plan.price > 0 && (
+                  <div className="mt-3 text-sm text-purple-600 dark:text-purple-400 font-semibold">
+                    🎁 +{appliedPromo.discountValue}일 무료 연장
+                  </div>
+                )}
               </div>
 
               <ul className="space-y-4 mb-8">
@@ -303,10 +481,11 @@ export default function PricingPage() {
                 {plan.buttonText}
               </Link>
             </motion.div>
-              );
-            })}
-          </div>
-        )}
+            );
+          })}
+        </div>
+        </>
+      )}
 
         {/* FAQ 섹션 */}
         <motion.div

@@ -1,0 +1,510 @@
+[
+  {
+    "question_set_id": "judge_week1",
+    "topic_id": "showtell_week1",
+    "week": 1,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What is your favorite toy?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "Why do you like this toy?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q3",
+          "text": "How often do you play with it?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q4",
+          "text": "Who gave you this toy?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q5",
+          "text": "Can you describe what your toy looks like?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_week2",
+    "topic_id": "showtell_week2",
+    "week": 2,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "Do you have a pet? What kind?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "What does your pet (or dream pet) look like?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q3",
+          "text": "What do you do to take care of your pet?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q4",
+          "text": "What is your favorite thing about your pet?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q5",
+          "text": "If you could have any pet, what would it be and why?",
+          "difficulty": "hard",
+          "expected_answer_length": "long"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_week3",
+    "topic_id": "showtell_week3",
+    "week": 3,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What is your favorite food?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "How does it taste?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q3",
+          "text": "When do you usually eat it?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q4",
+          "text": "Who makes this food for you?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q5",
+          "text": "Can you tell me about the first time you tried this food?",
+          "difficulty": "hard",
+          "expected_answer_length": "long"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_week4",
+    "topic_id": "showtell_week4",
+    "week": 4,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What is your best friend's name?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "How did you meet your best friend?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q3",
+          "text": "What do you like to do together?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q4",
+          "text": "What makes your friend special?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q5",
+          "text": "Can you tell me about a fun memory with your friend?",
+          "difficulty": "hard",
+          "expected_answer_length": "long"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_week5",
+    "topic_id": "showtell_week5",
+    "week": 5,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What is your favorite place?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "Where is this place located?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q3",
+          "text": "What do you do at this place?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q4",
+          "text": "Why is this place special to you?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q5",
+          "text": "Can you describe what this place looks like?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_week6",
+    "topic_id": "showtell_week6",
+    "week": 6,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What is your hobby?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "How did you start this hobby?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q3",
+          "text": "How often do you practice your hobby?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q4",
+          "text": "What do you like most about your hobby?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q5",
+          "text": "What have you learned from doing this hobby?",
+          "difficulty": "hard",
+          "expected_answer_length": "long"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_week7",
+    "topic_id": "showtell_week7",
+    "week": 7,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "How many people are in your family?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "Can you tell me about your family members?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q3",
+          "text": "What do you like to do with your family?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q4",
+          "text": "What makes your family special?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q5",
+          "text": "Can you share a favorite family tradition or activity?",
+          "difficulty": "hard",
+          "expected_answer_length": "long"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_week8",
+    "topic_id": "showtell_week8",
+    "week": 8,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What special day are you talking about?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "When did this happen?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q3",
+          "text": "Who was with you on this special day?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q4",
+          "text": "What did you do on that day?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q5",
+          "text": "Why was this day so special to you?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_week9",
+    "topic_id": "showtell_week9",
+    "week": 9,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What do you want to be when you grow up?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "Why did you choose this job?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q3",
+          "text": "What do people in this job do?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q4",
+          "text": "What skills do you need for this job?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q5",
+          "text": "How are you preparing for this dream job?",
+          "difficulty": "hard",
+          "expected_answer_length": "long"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_week10",
+    "topic_id": "showtell_week10",
+    "week": 10,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What is your favorite season?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "What is the weather like in this season?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q3",
+          "text": "What activities do you do in this season?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q4",
+          "text": "Why do you like this season the most?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q5",
+          "text": "Can you describe your favorite memory from this season?",
+          "difficulty": "hard",
+          "expected_answer_length": "long"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_week11",
+    "topic_id": "showtell_week11",
+    "week": 11,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What is your favorite book or movie?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "What is it about?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q3",
+          "text": "Who is your favorite character?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q4",
+          "text": "Why do you like this book or movie?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q5",
+          "text": "Would you recommend it to your friends? Why?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "question_set_id": "judge_week12",
+    "topic_id": "showtell_week12",
+    "week": 12,
+    "json": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "text": "What are you proud of?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q2",
+          "text": "When did you accomplish this?",
+          "difficulty": "easy",
+          "expected_answer_length": "short"
+        },
+        {
+          "question_id": "q3",
+          "text": "How did you learn or practice to do this?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        },
+        {
+          "question_id": "q4",
+          "text": "Was it difficult? How did you overcome challenges?",
+          "difficulty": "hard",
+          "expected_answer_length": "long"
+        },
+        {
+          "question_id": "q5",
+          "text": "What did you learn from this experience?",
+          "difficulty": "medium",
+          "expected_answer_length": "medium"
+        }
+      ]
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  }
+]
+
+
+
+

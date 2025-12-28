@@ -1,0 +1,930 @@
+[
+  {
+    "content_pack_id": "showtell_week1",
+    "course_id": "show_tell_12w",
+    "week": 1,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week1",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 1: My Favorite Toy",
+      "description": "Learn to present about your favorite toy in English",
+      "day1": {
+        "write": {
+          "prompt": "Write about your favorite toy. Describe what it looks like, why you like it, and how you play with it.",
+          "guide_questions": [
+            "What is your favorite toy?",
+            "What does it look like?",
+            "Why do you like it?",
+            "How do you play with it?",
+            "When did you get it?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hello! Today I'm going to tell you about my favorite toy.",
+            "body": [
+              "Introduce your toy and describe what it looks like",
+              "Explain why it's your favorite",
+              "Share how you play with it"
+            ],
+            "conclusion": "That's why this toy is my favorite. Thank you for listening!"
+          },
+          "tips": [
+            "Speak clearly and slowly",
+            "Use simple sentences",
+            "Add details about colors, size, and feelings"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week1",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 1: My Favorite Toy",
+        "card_description": "My first Show & Tell presentation about my favorite toy",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "showtell_week2",
+    "course_id": "show_tell_12w",
+    "week": 2,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week2",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 2: My Pet (or Dream Pet)",
+      "description": "Present about your pet or a pet you wish you had",
+      "day1": {
+        "write": {
+          "prompt": "Write about your pet or a pet you wish you had. Describe what it looks like, what you do together, and why you love it.",
+          "guide_questions": [
+            "Do you have a pet? What kind?",
+            "What does it look like?",
+            "What do you do to take care of it?",
+            "What do you like to do together?",
+            "If you don't have a pet, what pet would you like to have and why?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hi! I want to tell you about my pet (or dream pet).",
+            "body": [
+              "Introduce your pet and describe its appearance",
+              "Explain what you do together or how you would care for it",
+              "Share what makes it special to you"
+            ],
+            "conclusion": "This is why I love my pet (or why I want this pet). Thank you!"
+          },
+          "tips": [
+            "Use describing words (adjectives)",
+            "Talk about actions (verbs)",
+            "Show your feelings about the pet"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week2",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 2: My Pet",
+        "card_description": "Presenting about my pet or dream pet",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "showtell_week3",
+    "course_id": "show_tell_12w",
+    "week": 3,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week3",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 3: My Favorite Food",
+      "description": "Share your favorite food and why you love it",
+      "day1": {
+        "write": {
+          "prompt": "Write about your favorite food. Describe what it tastes like, when you eat it, and why you love it.",
+          "guide_questions": [
+            "What is your favorite food?",
+            "How does it taste?",
+            "When do you usually eat it?",
+            "Who makes it for you?",
+            "Why is it your favorite?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hello! Today I'll share my favorite food with you.",
+            "body": [
+              "Introduce your favorite food",
+              "Describe how it tastes and looks",
+              "Explain when and why you eat it"
+            ],
+            "conclusion": "That's why this is my favorite food. Thanks for listening!"
+          },
+          "tips": [
+            "Use taste words (delicious, sweet, spicy)",
+            "Describe the food clearly",
+            "Explain your feelings about it"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week3",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 3: My Favorite Food",
+        "card_description": "Talking about my favorite food",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "showtell_week4",
+    "course_id": "show_tell_12w",
+    "week": 4,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week4",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 4: My Best Friend",
+      "description": "Introduce your best friend and what makes them special",
+      "day1": {
+        "write": {
+          "prompt": "Write about your best friend. Describe what they look like, what you do together, and why they're special.",
+          "guide_questions": [
+            "Who is your best friend?",
+            "What do they look like?",
+            "How did you meet?",
+            "What do you like to do together?",
+            "What makes them a good friend?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hi! I'm going to tell you about my best friend.",
+            "body": [
+              "Introduce your friend and describe them",
+              "Share what you do together",
+              "Explain why they're your best friend"
+            ],
+            "conclusion": "That's why [name] is my best friend. Thank you!"
+          },
+          "tips": [
+            "Use personality words (kind, funny, helpful)",
+            "Share a fun memory or activity",
+            "Show why friendship is important"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week4",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 4: My Best Friend",
+        "card_description": "Presenting about my best friend",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "showtell_week5",
+    "course_id": "show_tell_12w",
+    "week": 5,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week5",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 5: My Favorite Place",
+      "description": "Describe your favorite place and what makes it special",
+      "day1": {
+        "write": {
+          "prompt": "Write about your favorite place. Describe where it is, what it looks like, and what you do there.",
+          "guide_questions": [
+            "What is your favorite place?",
+            "Where is it?",
+            "What does it look like?",
+            "What do you do there?",
+            "Why is it special to you?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hello! I want to share my favorite place with you.",
+            "body": [
+              "Introduce the place and its location",
+              "Describe what it looks like",
+              "Explain what you do there and why it's special"
+            ],
+            "conclusion": "That's why this place is special to me. Thank you!"
+          },
+          "tips": [
+            "Use location words (near, far, next to)",
+            "Describe the surroundings",
+            "Share your feelings about the place"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week5",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 5: My Favorite Place",
+        "card_description": "Sharing about my favorite place",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "showtell_week6",
+    "course_id": "show_tell_12w",
+    "week": 6,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week6",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 6: My Hobby",
+      "description": "Present your favorite hobby and why you enjoy it",
+      "day1": {
+        "write": {
+          "prompt": "Write about your hobby. Describe what you do, how you do it, and why you enjoy it.",
+          "guide_questions": [
+            "What is your hobby?",
+            "How did you start?",
+            "How often do you practice?",
+            "What do you like about it?",
+            "What have you learned?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hi! Today I'll tell you about my hobby.",
+            "body": [
+              "Introduce your hobby",
+              "Explain how you practice it",
+              "Share why you enjoy it"
+            ],
+            "conclusion": "That's why I love my hobby. Thanks for listening!"
+          },
+          "tips": [
+            "Use action verbs",
+            "Describe the process",
+            "Share what you've achieved"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week6",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 6: My Hobby",
+        "card_description": "Presenting about my favorite hobby",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "showtell_week7",
+    "course_id": "show_tell_12w",
+    "week": 7,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week7",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 7: My Family",
+      "description": "Introduce your family and what makes them special",
+      "day1": {
+        "write": {
+          "prompt": "Write about your family. Introduce your family members and tell us what makes your family special.",
+          "guide_questions": [
+            "Who is in your family?",
+            "What do they look like?",
+            "What do you do together?",
+            "What makes your family special?",
+            "What's your favorite family activity?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hello! I want to introduce my family to you.",
+            "body": [
+              "Introduce your family members",
+              "Describe what you do together",
+              "Explain what makes your family special"
+            ],
+            "conclusion": "I love my family very much. Thank you!"
+          },
+          "tips": [
+            "Introduce each family member",
+            "Share a family tradition or activity",
+            "Express love and appreciation"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week7",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 7: My Family",
+        "card_description": "Presenting about my family",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "showtell_week8",
+    "course_id": "show_tell_12w",
+    "week": 8,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week8",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 8: A Special Day",
+      "description": "Tell a story about a special day you remember",
+      "day1": {
+        "write": {
+          "prompt": "Write about a special day. Tell us what happened, who was there, and why it was special.",
+          "guide_questions": [
+            "What special day are you talking about?",
+            "When did it happen?",
+            "Who was with you?",
+            "What did you do?",
+            "Why was it special?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hi! I'm going to tell you about a special day.",
+            "body": [
+              "Introduce the special day and when it happened",
+              "Describe what happened and who was there",
+              "Explain why it was special to you"
+            ],
+            "conclusion": "That's why this day is so special to me. Thank you!"
+          },
+          "tips": [
+            "Use past tense to tell the story",
+            "Describe events in order",
+            "Share your feelings"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week8",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 8: A Special Day",
+        "card_description": "Sharing a story about a special day",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "showtell_week9",
+    "course_id": "show_tell_12w",
+    "week": 9,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week9",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 9: My Dream Job",
+      "description": "Share what you want to be when you grow up",
+      "day1": {
+        "write": {
+          "prompt": "Write about your dream job. Share what you want to be, why you chose it, and how you're preparing.",
+          "guide_questions": [
+            "What do you want to be when you grow up?",
+            "Why did you choose this job?",
+            "What do people in this job do?",
+            "What skills do you need?",
+            "How are you preparing?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hello! Today I'll share my dream job with you.",
+            "body": [
+              "Introduce your dream job",
+              "Explain why you want to do this job",
+              "Share how you're working towards this goal"
+            ],
+            "conclusion": "I hope to achieve my dream in the future. Thank you!"
+          },
+          "tips": [
+            "Use future tense (want to, will)",
+            "Explain why this job is important",
+            "Show your passion and determination"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week9",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 9: My Dream Job",
+        "card_description": "Presenting about my dream for the future",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "showtell_week10",
+    "course_id": "show_tell_12w",
+    "week": 10,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week10",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 10: My Favorite Season",
+      "description": "Talk about your favorite season and why you like it",
+      "day1": {
+        "write": {
+          "prompt": "Write about your favorite season. Describe the weather, what you do, and why you like it.",
+          "guide_questions": [
+            "What is your favorite season?",
+            "What is the weather like?",
+            "What activities do you do?",
+            "Why do you like this season?",
+            "What's your favorite memory from this season?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hi! I'm going to tell you about my favorite season.",
+            "body": [
+              "Introduce your favorite season",
+              "Describe the weather and scenery",
+              "Share what you like to do in this season"
+            ],
+            "conclusion": "That's why this season is my favorite. Thank you!"
+          },
+          "tips": [
+            "Use weather and nature vocabulary",
+            "Describe seasonal activities",
+            "Share your feelings about the season"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week10",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 10: My Favorite Season",
+        "card_description": "Presenting about my favorite season",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "showtell_week11",
+    "course_id": "show_tell_12w",
+    "week": 11,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week11",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 11: My Favorite Book or Movie",
+      "description": "Share your favorite book or movie and recommend it",
+      "day1": {
+        "write": {
+          "prompt": "Write about your favorite book or movie. Tell us what it's about and why you recommend it.",
+          "guide_questions": [
+            "What is your favorite book or movie?",
+            "What is it about?",
+            "Who is your favorite character?",
+            "Why do you like it?",
+            "Would you recommend it to others?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hello! I want to tell you about my favorite book/movie.",
+            "body": [
+              "Introduce the book or movie title",
+              "Summarize what it's about",
+              "Explain why you like it and recommend it"
+            ],
+            "conclusion": "I hope you'll enjoy it too. Thank you!"
+          },
+          "tips": [
+            "Don't spoil the ending!",
+            "Describe the main characters or theme",
+            "Use opinion words (I think, I believe)"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week11",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 11: My Favorite Book/Movie",
+        "card_description": "Recommending my favorite story",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  },
+  {
+    "content_pack_id": "showtell_week12",
+    "course_id": "show_tell_12w",
+    "week": 12,
+    "grade_band": "HIGH",
+    "cefr_level": "A2",
+    "topic_id": "showtell_week12",
+    "task_type_id": "showtell.presentation",
+    "json": {
+      "title": "Week 12: Something I'm Proud Of",
+      "description": "Share an achievement and reflect on your growth",
+      "day1": {
+        "write": {
+          "prompt": "Write about something you're proud of. Share what you accomplished, how you did it, and what you learned.",
+          "guide_questions": [
+            "What are you proud of?",
+            "When did you accomplish this?",
+            "How did you learn or practice?",
+            "Was it difficult? How did you overcome challenges?",
+            "What did you learn from this experience?"
+          ],
+          "min_words": 50,
+          "max_words": 150
+        },
+        "fix": {
+          "enabled": true,
+          "correction_focus": ["grammar", "vocabulary", "structure"]
+        }
+      },
+      "day2": {
+        "script_coach": {
+          "target_duration_seconds": 30,
+          "structure_template": {
+            "intro": "Hi! I want to share something I'm really proud of.",
+            "body": [
+              "Introduce your achievement",
+              "Explain how you accomplished it",
+              "Share what you learned and how you've grown"
+            ],
+            "conclusion": "I'm proud of how far I've come. Thank you for listening!"
+          },
+          "tips": [
+            "Show confidence and pride",
+            "Explain the challenges you faced",
+            "Reflect on what you learned"
+          ]
+        },
+        "tts": {
+          "enabled": true,
+          "voice": "en-US-Standard-C"
+        },
+        "shadowing": {
+          "enabled": true,
+          "max_attempts": 3
+        }
+      },
+      "day3": {
+        "rehearsal": {
+          "max_attempts": 2,
+          "feedback_focus": ["pronunciation", "fluency", "content"]
+        },
+        "judge": {
+          "question_bank_ref": "judge_week12",
+          "question_count": 5,
+          "time_limit_seconds": 30
+        }
+      },
+      "portfolio": {
+        "card_title": "Week 12: Something I'm Proud Of",
+        "card_description": "Celebrating my achievement and growth",
+        "save_items": ["final_script", "final_recording", "judge_qa"]
+      }
+    },
+    "active": true,
+    "version": "1.0",
+    "created_at": "2025-12-27T00:00:00.000Z"
+  }
+]
+
+
+
+

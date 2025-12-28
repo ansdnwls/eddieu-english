@@ -3,8 +3,15 @@ import { doc, getDoc, updateDoc, addDoc, collection } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db as clientDb } from "@/lib/firebase";
 import firebaseApp from "@/lib/firebase";
+import { checkPenpalFeature } from "@/lib/apiFeatureFlags";
 
 export async function POST(request: NextRequest) {
+  // Feature Flag 확인
+  const featureCheck = checkPenpalFeature();
+  if (!featureCheck.allowed) {
+    return featureCheck.response!;
+  }
+
   try {
     console.log("📬 편지 수령 인증 API 시작");
 

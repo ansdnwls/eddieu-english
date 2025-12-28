@@ -6,6 +6,7 @@ import { collection, query, where, onSnapshot, deleteDoc, doc } from "firebase/f
 import { db } from "@/lib/firebase";
 import { DiaryEntry } from "@/app/types";
 import Link from "next/link";
+import { isPenpalEnabled } from "@/lib/featureFlags";
 
 interface DiaryListProps {
   userId: string;
@@ -77,64 +78,38 @@ export default function DiaryList({ userId, currentAccountType: propAccountType,
           console.log("📄 문서 ID:", doc.id, "contentType:", data.contentType, "compositionType:", data.compositionType, "accountType:", data.accountType);
         });
         
-        console.log("🔍 필터링 전 총:", diaryList.length, "개 | 현재 모드:", currentAccountType, "| 아이 ID:", currentChildId, "| 타입:", typeof currentChildId);
+        console.log("🔍 필터링 전 총:", diaryList.length, "개 | 현재 모드:", currentAccountType, "| 아이 ID:", currentChildId);
         
         // 클라이언트 사이드에서 계정 타입 및 아이별 필터링
         const filteredList = diaryList.filter(diary => {
           const diaryAccountType = diary.accountType;
           const diaryChildId = diary.childId;
           
-          console.log("📄 일기 필터링:", {
-            diaryId: diary.id,
-            diaryAccountType,
-            diaryChildId,
-            currentAccountType,
-            currentChildId,
-            날짜: new Date(diary.createdAt).toLocaleDateString("ko-KR")
-          });
-          
           // 1. accountType 필터링
           if (diaryAccountType) {
             // accountType이 설정되어 있으면 현재 모드와 일치해야 함
             if (diaryAccountType !== currentAccountType) {
-              console.log("  ❌ accountType 불일치");
               return false;
             }
           } else {
             // accountType이 없는 기존 데이터는 아이 모드에서만 표시
             if (currentAccountType !== "child") {
-              console.log("  ❌ accountType 없음 + 부모모드");
               return false;
             }
           }
           
           // 2. 아이 모드인 경우 childId 필터링
-          if (currentAccountType === "child" && currentChildId && currentChildId !== "") {
-            console.log("  🔍 childId 필터링 시작");
-            // childId가 있는 일기만 필터링
-            if (diaryChildId) {
-              // 현재 선택된 아이와 일치하지 않으면 건너뛰기
-              if (diaryChildId !== currentChildId) {
-                console.log("  ❌ childId 불일치:", diaryChildId, "!==", currentChildId);
-                return false;
-              }
-              console.log("  ✅ childId 일치");
+          if (currentAccountType === "child" && currentChildId) {
+            // childId가 있는 일기는 현재 선택된 아이와 일치해야 함
+            if (diaryChildId && diaryChildId !== currentChildId) {
+              return false;
             }
-            // childId가 없는 기존 데이터 처리
-            else {
-              // currentChildId가 "child1"이거나 userId와 같으면 표시 (첫 번째 아이)
-              const isFirstChild = currentChildId === "child1" || currentChildId === userId;
-              if (!isFirstChild) {
-                console.log("  ❌ childId 없음 + 첫째 아이 아님 (currentChildId:", currentChildId, ", userId:", userId, ")");
-                return false;
-              }
-              console.log("  ✅ childId 없음 + 첫째 아이");
+            // childId가 없는 기존 데이터는 첫 번째 아이(child1)에게만 표시
+            if (!diaryChildId && currentChildId !== "child1") {
+              return false;
             }
-          } else {
-            console.log("  ⚠️ childId 필터링 스킵 (currentChildId:", currentChildId, ")");
           }
           
-          console.log("  ✅ 필터 통과");
           return true;
         });
         
@@ -157,7 +132,7 @@ export default function DiaryList({ userId, currentAccountType: propAccountType,
     );
 
     return () => unsubscribe();
-  }, [userId, currentAccountType, currentChildId ?? ""]); // null/undefined를 빈 문자열로 변환하여 배열 크기 일정하게 유지
+  }, [userId, currentAccountType]);
 
   const toggleSelection = (diaryId: string) => {
     const newSelected = new Set(selectedDiaries);
@@ -224,33 +199,81 @@ export default function DiaryList({ userId, currentAccountType: propAccountType,
 
   if (diaries.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center"
-      >
-        <div className="text-6xl mb-4">📝</div>
-        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-          아직 작성한 항목이 없어요
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          영어 일기나 작문을 작성해보세요!
-        </p>
-        <div className="flex gap-3 justify-center">
-          <Link
-            href="/#upload-section"
-            className="inline-block bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:scale-105 transition-all"
-          >
-            📔 일기 작성하기 →
+      <div className="space-y-6">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center"
+        >
+          <div className="text-6xl mb-4">📝</div>
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
+            아직 작성한 항목이 없어요
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            영어 일기나 작문을 작성해보세요!
+          </p>
+        </motion.div>
+        
+        {/* 일기 작성하기, 작문 작성하기 버튼 */}
+        <div>
+          <Link href="/#upload-section" className="block mb-12">
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-6 px-8 rounded-2xl shadow-lg text-center text-xl cursor-pointer"
+            >
+              📝 영어 일기 첨삭 시작하기
+            </motion.div>
           </Link>
-          <Link
-            href="/composition"
-            className="inline-block bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:scale-105 transition-all"
-          >
-            ✍️ 작문 작성하기 →
+
+          <Link href="/composition" className="block">
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-6 px-8 rounded-2xl shadow-lg text-center text-xl cursor-pointer"
+            >
+              ✍️ 영어작문 첨삭 (편지, 에세이 등)
+            </motion.div>
           </Link>
         </div>
-      </motion.div>
+
+        {/* 빠른 링크 */}
+        <div className="grid grid-cols-2 gap-4">
+          <Link href="/vocabulary">
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg text-center cursor-pointer"
+            >
+              <div className="text-2xl mb-2">📚</div>
+              <div>단어장</div>
+            </motion.div>
+          </Link>
+          <Link href="/stats">
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg text-center cursor-pointer"
+            >
+              <div className="text-2xl mb-2">📊</div>
+              <div>성장 통계</div>
+            </motion.div>
+          </Link>
+          {/* 펜팔 관리 링크 - Feature Flag로 제어 */}
+          {isPenpalEnabled() && (
+            <Link href="/penpal/manage">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg text-center cursor-pointer"
+              >
+                <div className="text-2xl mb-2">✉️</div>
+                <div>펜팔 관리</div>
+              </motion.div>
+            </Link>
+          )}
+        </div>
+      </div>
     );
   }
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteUser } from "firebase/auth";
@@ -10,7 +11,7 @@ import AuthGuard from "@/components/AuthGuard";
 import { doc, getDoc, updateDoc, setDoc, addDoc, collection, deleteDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import EnglishLevelSelector from "@/app/components/EnglishLevelSelector";
-import { EnglishLevel } from "@/app/types";
+import { EnglishLevel, ChildProfile } from "@/app/types";
 
 interface ChildInfo {
   childName: string;
@@ -38,6 +39,8 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState("");
   const [currentAccountType, setCurrentAccountType] = useState<"child" | "parent">("child");
   const [hasParentAccount, setHasParentAccount] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [addParent, setAddParent] = useState(false);
   const [parentName, setParentName] = useState("");
   const [showWithdrawal, setShowWithdrawal] = useState(false);
@@ -45,6 +48,9 @@ export default function ProfilePage() {
   const [withdrawalDetail, setWithdrawalDetail] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
   const [currentChildId, setCurrentChildId] = useState<string | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string>("free");
+  const [children, setChildren] = useState<ChildProfile[]>([]);
+  const [canAddMoreChildren, setCanAddMoreChildren] = useState(false);
   const [formData, setFormData] = useState<ChildInfo>({
     childName: "",
     parentId: user?.uid || "",
@@ -63,6 +69,36 @@ export default function ProfilePage() {
       }
 
       try {
+        // 구독 정보 조회
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const plan = userData.subscriptionPlan || "free";
+          setSubscriptionPlan(plan);
+          console.log("💎 구독 플랜:", plan);
+        }
+
+        // 모든 아이 목록 로드
+        const childrenRef = collection(db, "children");
+        const q = query(childrenRef, where("parentId", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+        
+        const childList: ChildProfile[] = [];
+        querySnapshot.forEach((doc) => {
+          childList.push({
+            id: doc.id.includes("_") ? doc.id.split("_")[1] : doc.id,
+            ...doc.data(),
+          } as ChildProfile);
+        });
+
+        setChildren(childList);
+        
+        // 구독 플랜에 따른 아이 추가 가능 여부
+        const plan = userDoc.exists() ? (userDoc.data().subscriptionPlan || "free") : "free";
+        setCanAddMoreChildren(childList.length < (plan === "premium" || plan === "family" ? 3 : 1));
+
         // 현재 선택된 아이 ID 가져오기
         const savedChildId = localStorage.getItem("currentChildId") || "child1";
         setCurrentChildId(savedChildId);
@@ -219,18 +255,22 @@ export default function ProfilePage() {
 
     if (!confirm1) return;
 
-    // 2차 확인 (아이 이름 입력)
-    const confirmName = prompt(
-      `정말로 삭제하시려면 아이 이름 "${formData.childName}"을(를) 입력해주세요:`
-    );
+    // 2차 확인 모달 표시
+    setShowDeleteConfirm(true);
+  };
 
-    if (confirmName !== formData.childName) {
+  // 삭제 확인 완료
+  const confirmDeleteChild = async () => {
+    if (deleteConfirmName !== formData.childName) {
       alert("아이 이름이 일치하지 않습니다. 삭제가 취소되었습니다.");
+      setDeleteConfirmName("");
       return;
     }
 
     setSaving(true);
     setError("");
+    setShowDeleteConfirm(false);
+    setDeleteConfirmName("");
 
     try {
       const childDocId = `${user.uid}_${currentChildId}`;
@@ -659,32 +699,122 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* 부모 프로필 추가/수정 */}
+              {/* 아이 추가 (프리미엄 전용) */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6"
               >
-                <div className="mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setAddParent(!addParent)}
-                    className={`w-full px-6 py-4 rounded-xl font-semibold transition-all flex items-center justify-between ${
-                      addParent
-                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-2xl">👨‍💼</span>
-                      <span>{hasParentAccount ? "부모 프로필 수정" : "부모 프로필 추가 (1+1)"}</span>
-                    </span>
-                    <span className="text-2xl">{addParent ? "▼" : "▶"}</span>
-                  </button>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    💡 부모님도 영어 작문 연습을 하고 싶으시다면 부모 프로필을 {hasParentAccount ? "수정" : "추가"}하세요!
-                  </p>
-                </div>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                  👶 아이 추가
+                </h3>
+                {subscriptionPlan === "premium" || subscriptionPlan === "family" ? (
+                  <>
+                    {canAddMoreChildren ? (
+                      <Link href="/add-child?mode=add">
+                        <motion.button
+                          type="button"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                        >
+                          <span className="text-2xl">👶➕</span>
+                          <span>아이 추가하기</span>
+                        </motion.button>
+                      </Link>
+                    ) : (
+                      <div className="bg-gray-100 dark:bg-gray-700 rounded-xl p-4 text-center">
+                        <p className="text-gray-600 dark:text-gray-400">
+                          최대 3명의 아이까지 등록 가능합니다. (현재 {children.length}명)
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-6 border-2 border-purple-300 dark:border-purple-700">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-3xl">🔒</span>
+                      <div>
+                        <h4 className="font-semibold text-gray-800 dark:text-white">
+                          프리미엄 플랜 전용 기능
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          프리미엄 플랜으로 업그레이드하시면 최대 3명의 아이를 등록하고 관리할 수 있습니다.
+                        </p>
+                      </div>
+                    </div>
+                    <Link href="/pricing">
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="mt-4 w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all"
+                      >
+                        프리미엄 플랜 알아보기 →
+                      </motion.button>
+                    </Link>
+                  </div>
+                )}
+              </motion.div>
+
+              {/* 부모 프로필 추가/수정 (프리미엄 전용) */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6"
+              >
+                {subscriptionPlan === "premium" || subscriptionPlan === "family" ? (
+                  <>
+                    <div className="mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setAddParent(!addParent)}
+                        className={`w-full px-6 py-4 rounded-xl font-semibold transition-all flex items-center justify-between ${
+                          addParent
+                            ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+                            : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="text-2xl">👨‍💼</span>
+                          <span>{hasParentAccount ? "부모 프로필 수정" : "부모 프로필 추가 (1+1)"}</span>
+                        </span>
+                        <span className="text-2xl">{addParent ? "▼" : "▶"}</span>
+                      </button>
+                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        💡 부모님도 영어 작문 연습을 하고 싶으시다면 부모 프로필을 {hasParentAccount ? "수정" : "추가"}하세요!
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-6 border-2 border-purple-300 dark:border-purple-700">
+                    <div className="flex items-start gap-3">
+                      <div className="text-3xl">💎</div>
+                      <div className="flex-1">
+                        <h4 className="text-base font-bold text-purple-800 dark:text-purple-300 mb-2">
+                          부모 프로필은 프리미엄 기능이에요!
+                        </h4>
+                        <p className="text-sm text-purple-700 dark:text-purple-400 mb-3">
+                          <strong>프리미엄 플랜</strong>에서는:
+                        </p>
+                        <ul className="text-sm text-purple-700 dark:text-purple-400 space-y-1 mb-4">
+                          <li>✅ 부모 프로필 생성 가능</li>
+                          <li>✅ 성인용 고급 영어 작문 첨삭</li>
+                          <li>✅ 부모 모드 전환 기능</li>
+                          <li>✅ 일기 첨삭 무제한 + TTS 무제한</li>
+                        </ul>
+                        <Link href="/pricing">
+                          <button
+                            type="button"
+                            className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-bold rounded-lg hover:scale-105 transition-all shadow-lg"
+                          >
+                            프리미엄 플랜 보기 →
+                          </button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {addParent && (
                   <motion.div
@@ -888,6 +1018,54 @@ export default function ProfilePage() {
           </motion.div>
         </div>
       </div>
+
+      {/* 아이 삭제 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+          >
+            <h3 className="text-xl font-bold text-red-600 dark:text-red-400 mb-4">
+              ⚠️ 최종 확인
+            </h3>
+            <p className="text-gray-700 dark:text-gray-300 mb-4">
+              정말로 삭제하시려면 아이 이름 <strong>"{formData.childName}"</strong>을(를) 입력해주세요:
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmName}
+              onChange={(e) => setDeleteConfirmName(e.target.value)}
+              placeholder="아이 이름을 입력하세요"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent mb-6"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteConfirmName("");
+                }}
+                className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+              >
+                취소
+              </button>
+              <button
+                onClick={confirmDeleteChild}
+                disabled={deleteConfirmName !== formData.childName}
+                className={`flex-1 px-4 py-3 bg-red-500 text-white font-semibold rounded-lg transition-all ${
+                  deleteConfirmName === formData.childName
+                    ? "hover:bg-red-600"
+                    : "opacity-50 cursor-not-allowed"
+                }`}
+              >
+                삭제
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </AuthGuard>
   );
 }

@@ -16,6 +16,8 @@ function PaymentSuccessContent() {
   const paymentKey = searchParams.get("paymentKey");
   const orderId = searchParams.get("orderId");
   const amount = searchParams.get("amount");
+  const promoCode = searchParams.get("promoCode");
+  const originalAmount = searchParams.get("originalAmount");
 
   useEffect(() => {
     const confirmPayment = async () => {
@@ -38,6 +40,8 @@ function PaymentSuccessContent() {
             orderId,
             amount: Number(amount),
             userId: user?.uid, // 구독 결제를 위해 userId 전달
+            promoCode: promoCode || undefined, // 프로모션 코드 전달
+            originalAmount: originalAmount ? Number(originalAmount) : undefined, // 원래 금액 전달
           }),
         });
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
+import { checkPenpalFeature } from "@/lib/apiFeatureFlags";
 
 interface NotifyUser {
   userId: string;
@@ -14,6 +15,12 @@ interface RequestBody {
 }
 
 export async function POST(request: NextRequest) {
+  // Feature Flag 확인
+  const featureCheck = checkPenpalFeature();
+  if (!featureCheck.allowed) {
+    return featureCheck.response!;
+  }
+
   try {
     if (!db) {
       return NextResponse.json(
